@@ -54,7 +54,9 @@ $tickets = $stmt->fetchAll();
             <?php foreach ($tickets as $ticket): ?>
                 <tr>
                     <td>
-                        <?php echo htmlspecialchars($ticket['ticket_number']); ?>
+                        <a href="ticket.php?id=<?php echo $ticket['id']; ?>">
+                            <?php echo htmlspecialchars($ticket['ticket_number']); ?>
+                        </a>
                     </td>
                     <td>
                         <?php echo htmlspecialchars($ticket['sender_email']); ?>
