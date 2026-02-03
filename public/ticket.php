@@ -1,6 +1,7 @@
 <?php
 require 'auth.php';
 require '../config/db.php';
+require '../config/mailer.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     die('Invalid ticket ID');
@@ -32,12 +33,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $message = trim($_POST['message']);
 
     if ($message !== '') {
-        $stmt = $pdo->prepare("
-            INSERT INTO updates (ticket_id, message, sent_to_user)
-            VALUES (?, ?, 0)
-        ");
-        $stmt->execute([$ticketId, $message]);
+    $sendToUser = isset($_POST['send_email']) ? 1 : 0;
+
+    $stmt = $pdo->prepare("
+        INSERT INTO updates (ticket_id, message, sent_to_user)
+        VALUES (?, ?, ?)
+    ");
+    $stmt->execute([$ticketId, $message, $sendToUser]);
+
+    if ($sendToUser) {
+        sendMail(
+            $ticket['sender_email'],
+            "Update on Ticket {$ticket['ticket_number']}",
+            $message . "\n\nTicket: {$ticket['ticket_number']}"
+        );
     }
+}
+
 
     $stmt = $pdo->prepare("
         UPDATE tickets SET status = ? WHERE id = ?
@@ -111,7 +123,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <label>Update message (internal for now)</label><br>
         <textarea name="message" rows="5" cols="60"></textarea><br><br>
-
+        <label>
+        <input type="checkbox" name="send_email" checked>
+            Send this update to staff by email
+        </label>
+        <br><br>
         <button type="submit">Save</button>
     </form>
 </div>
