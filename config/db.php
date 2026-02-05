@@ -1,20 +1,21 @@
 <?php
 
-$host = 'localhost';
-$db   = 'it_ticket_system';
+$host = '127.0.0.1';
+$db   = 'it_ticket_system';   // MUST MATCH phpMyAdmin
 $user = 'root';
 $pass = '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-];
+$port = 3307;                 // IMPORTANT (your MySQL is on 3307)
 
 try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (Exception $e) {
+    $pdo = new PDO(
+        "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4",
+        $user,
+        $pass,
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+        ]
+    );
+} catch (PDOException $e) {
     die('Database connection failed');
 }
