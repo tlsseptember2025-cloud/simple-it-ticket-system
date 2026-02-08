@@ -21,7 +21,7 @@ $offset = ($page - 1) * $limit;
 $offset = ($page - 1) * $limit;
 
 /* ===== COUNT TOTAL TICKETS ===== */
-$totalStmt = $pdo->query("SELECT COUNT(*) FROM tickets");
+$totalStmt = $pdo->query("SELECT COUNT(*) FROM tickets where status != 'Closed'");
 $totalTickets = (int)$totalStmt->fetchColumn();
 $totalPages   = (int)ceil($totalTickets / $limit);
 
@@ -29,6 +29,7 @@ $totalPages   = (int)ceil($totalTickets / $limit);
 $stmt = $pdo->prepare("
     SELECT id, ticket_number, sender_email, subject, status, created_at
     FROM tickets
+    WHERE status != 'Closed'
     ORDER BY created_at DESC
     LIMIT :limit OFFSET :offset
 ");
@@ -37,6 +38,40 @@ $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
 
 $tickets = $stmt->fetchAll();
+
+/* ================= CLOSED TICKETS (MODAL) ================= */
+
+$closedLimit = 5;
+$closedPage  = isset($_GET['closed_page']) && is_numeric($_GET['closed_page'])
+    ? (int)$_GET['closed_page']
+    : 1;
+
+$closedPage = max(1, $closedPage);
+$closedOffset = ($closedPage - 1) * $closedLimit;
+
+/* Count closed tickets */
+$closedCountStmt = $pdo->query("
+    SELECT COUNT(*) 
+    FROM tickets 
+    WHERE status = 'Closed'
+");
+$totalClosed = (int) $closedCountStmt->fetchColumn();
+$closedPages = (int) ceil($totalClosed / $closedLimit);
+
+/* Fetch closed tickets */
+$closedStmt = $pdo->prepare("
+    SELECT id, ticket_number, sender_email, subject, created_at
+    FROM tickets
+    WHERE status = 'Closed'
+    ORDER BY created_at DESC
+    LIMIT :limit OFFSET :offset
+");
+$closedStmt->bindValue(':limit', $closedLimit, PDO::PARAM_INT);
+$closedStmt->bindValue(':offset', $closedOffset, PDO::PARAM_INT);
+$closedStmt->execute();
+
+$closedTickets = $closedStmt->fetchAll();
+
 ?>
 
 <!DOCTYPE html>
@@ -109,6 +144,21 @@ $tickets = $stmt->fetchAll();
         </small>
     </div>
 
+    <?php if ($totalClosed > 0): ?>
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <span>
+            ℹ️ There are <strong><?php echo $totalClosed; ?></strong> closed tickets archived.
+        </span>
+        <button
+            class="btn btn-sm btn-outline-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#closedTicketsModal"
+        >
+            📁 View Closed Tickets
+        </button>
+    </div>
+<?php endif; ?>
+
     <!-- Tickets Table -->
     <div class="card shadow-sm">
         <div class="card-body p-0">
@@ -178,6 +228,7 @@ $tickets = $stmt->fetchAll();
             </table>
 
         </div>
+
     </div>
 
     <!-- Pagination -->
@@ -205,6 +256,12 @@ $tickets = $stmt->fetchAll();
         </nav>
     <?php endif; ?>
 
+    <br>
+
+     <a href="backup.php?backup=1" class="btn btn-sm btn-outline-primary">
+    📥 Backup Database
+    </a>
+
 </div>
 
 <script>
@@ -220,6 +277,81 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 3000);
 });
 </script>
+
+<div class="modal fade" id="closedTicketsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">📁 Closed Tickets (Archive)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <?php if (empty($closedTickets)): ?>
+                    <p class="text-muted text-center">No closed tickets found.</p>
+                <?php else: ?>
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ticket #</th>
+                                <th>From</th>
+                                <th>Subject</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($closedTickets as $ct): ?>
+                                <tr>
+                                    <td>
+                                        <a href="ticket.php?id=<?php echo $ct['id']; ?>">
+                                            <?php echo htmlspecialchars($ct['ticket_number']); ?>
+                                        </a>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($ct['sender_email']); ?></td>
+                                    <td><?php echo htmlspecialchars($ct['subject']); ?></td>
+                                    <td class="text-muted small">
+                                        <?php echo date('M j, Y g:i A', strtotime($ct['created_at'])); ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+
+                <!-- Pagination -->
+                <?php if ($closedPages > 1): ?>
+                    <nav>
+                        <ul class="pagination justify-content-center">
+
+                            <?php for ($i = 1; $i <= $closedPages; $i++): ?>
+                                <li class="page-item <?php echo $i === $closedPage ? 'active' : ''; ?>">
+                                    <a
+                                        class="page-link"
+                                        href="?closed_page=<?php echo $i; ?>"
+                                        data-bs-dismiss="modal"
+                                    >
+                                        <?php echo $i; ?>
+                                    </a>
+                                </li>
+                            <?php endfor; ?>
+
+                        </ul>
+                    </nav>
+                <?php endif; ?>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
