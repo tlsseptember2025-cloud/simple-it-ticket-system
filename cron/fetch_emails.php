@@ -9,13 +9,38 @@ $allowedDomain = '@loopsautomation.com';
 
 $imapHost = '{imap.gmail.com:993/imap/ssl}INBOX';
 $imapUser = 'rami.wahdan@loopsautomation.com';
-$imapPass = 'svyh dqhe rlif dygv'; // app password
+$imapPass = 'svyh dqhe rlif dygv';
 
 /* ================= HELPERS ================= */
 
 function normalizeSubject(string $subject): string
 {
     return trim(preg_replace('/^(re|fw|fwd)\s*:\s*/i', '', $subject));
+}
+
+function cleanMessage(string $text): string
+{
+    $text = str_replace(["\r\n", "\r"], "\n", $text);
+    $text = preg_replace('/\[image:.*?\]/i', '', $text);
+    $text = preg_replace('/^>.*$/m', '', $text);
+    $text = preg_split('/\ROn .* wrote:\R/i', $text)[0];
+    $text = preg_split('/\R--\R/', $text)[0];
+
+    $signatures = [
+        '/best regards.*/is',
+        '/kind regards.*/is',
+        '/regards.*/is',
+        '/thanks.*/is',
+        '/thank you.*/is',
+        '/sent from my.*/is',
+        '/www\..*/is',
+    ];
+
+    foreach ($signatures as $s) {
+        $text = preg_replace($s, '', $text);
+    }
+
+    return trim(preg_replace("/\n{3,}/", "\n\n", $text));
 }
 
 /* ================= BODY ================= */
@@ -26,10 +51,7 @@ function extractBodyRecursive($mailbox, $emailNumber, $structure, $partNumber = 
         $body = imap_fetchbody($mailbox, $emailNumber, $partNumber ?: 1);
         if ($structure->encoding == 3) $body = base64_decode($body);
         if ($structure->encoding == 4) $body = quoted_printable_decode($body);
-
-        if (in_array(strtolower($structure->subtype), ['plain','html'])) {
-            return trim(strip_tags($body));
-        }
+        return trim(strip_tags($body));
     }
 
     if (!empty($structure->parts)) {
@@ -45,13 +67,6 @@ function extractBodyRecursive($mailbox, $emailNumber, $structure, $partNumber = 
     }
 
     return '';
-}
-
-function cleanEmailBody(string $text): string
-{
-    $text = preg_split('/\ROn .* wrote:\R/i', $text)[0];
-    $text = preg_split('/\R--\R/', $text)[0];
-    return trim($text);
 }
 
 /* ================= ATTACHMENTS ================= */
@@ -108,15 +123,9 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
 /* ================= PROCESS MAIL ================= */
 
 $mailbox = imap_open($imapHost, $imapUser, $imapPass);
-
-if (!$mailbox) {
-    // imap_open failed → nothing to close
-    return;
-}
-
+if (!$mailbox) return;
 
 $emails = imap_search($mailbox, 'ALL');
-//if (!$emails) exit;
 if (!$emails) {
     imap_close($mailbox);
     return;
@@ -124,7 +133,7 @@ if (!$emails) {
 
 foreach ($emails as $emailNumber) {
 
-    $headers = imap_rfc822_parse_headers(imap_fetchheader($mailbox, $emailNumber));
+    $headers  = imap_rfc822_parse_headers(imap_fetchheader($mailbox, $emailNumber));
     $overview = imap_fetch_overview($mailbox, $emailNumber, 0)[0];
 
     $messageId = $headers->message_id ?? null;
@@ -141,11 +150,11 @@ foreach ($emails as $emailNumber) {
     $subjectClean = normalizeSubject($overview->subject ?? '(No Subject)');
     $structure = imap_fetchstructure($mailbox, $emailNumber);
 
-    $body = cleanEmailBody(
+    $body = cleanMessage(
         extractBodyRecursive($mailbox, $emailNumber, $structure)
     );
 
-    /* ===== FIND TICKET NUMBER ===== */
+    /* ===== EXISTING TICKET ===== */
     if (preg_match('/LA-Support-\d{4}-[A-Z0-9]+/', $subjectClean, $m)) {
 
         $stmt = $pdo->prepare("SELECT id,status FROM tickets WHERE ticket_number=?");
@@ -177,12 +186,28 @@ foreach ($emails as $emailNumber) {
     }
 
     /* ===== NEW TICKET ===== */
+
     $ticketNumber = 'LA-Support-'.date('Y').'-'.strtoupper(bin2hex(random_bytes(4)));
+    $statusToken  = bin2hex(random_bytes(16));
 
     $pdo->prepare("
-        INSERT INTO tickets (ticket_number,sender_email,subject,message)
-        VALUES (?, ?, ?, ?)
-    ")->execute([$ticketNumber,$fromEmail,$subjectClean,$body]);
+        INSERT INTO tickets (
+            ticket_number,
+            sender_email,
+            subject,
+            message,
+            status,
+            status_token,
+            status_updated_at
+        )
+        VALUES (?, ?, ?, ?, 'Open', ?, NOW())
+    ")->execute([
+        $ticketNumber,
+        $fromEmail,
+        $subjectClean,
+        $body,
+        $statusToken
+    ]);
 
     $ticketId = $pdo->lastInsertId();
 
@@ -191,7 +216,7 @@ foreach ($emails as $emailNumber) {
     sendMail(
         $fromEmail,
         "Ticket Created: $ticketNumber",
-        "Your request has been received.\nTicket Number: $ticketNumber"
+        "Your request has been received.\n\nTicket Number: $ticketNumber"
     );
 
     $pdo->prepare("INSERT IGNORE INTO processed_emails (message_id) VALUES (?)")

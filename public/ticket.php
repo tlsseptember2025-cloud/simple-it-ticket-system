@@ -133,6 +133,21 @@ if (!empty($_FILES['attachments']['name'][0])) {
     /* ---- Send emails ---- */
     if ($sendEmail) {
 
+        $tokenStmt = $pdo->prepare("
+        SELECT status_token
+        FROM tickets
+        WHERE id = ?
+        ");
+    $tokenStmt->execute([$ticketId]);
+    $tokenRow = $tokenStmt->fetch();
+
+    if (empty($tokenRow['status_token'])) {
+        die('Missing status token');
+    }
+
+    $statusToken = $tokenRow['status_token'];
+
+
         $statusLink = "http://localhost/simple-it-ticket-system/public/ticket_status.php?token={$ticket['status_token']}";
 
         if ($newStatus === 'Closed') {

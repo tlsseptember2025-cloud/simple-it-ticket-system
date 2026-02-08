@@ -1,10 +1,10 @@
 <?php
 
-$host = '127.0.0.1';
-$db   = 'it_ticket_system';   // MUST MATCH phpMyAdmin
+$host = 'localhost';   // ← safer than 127.0.0.1 in XAMPP
+$db   = 'it_ticket_system';
 $user = 'root';
-$pass = '';
-$port = 3307;                 // IMPORTANT (your MySQL is on 3307)
+$pass = 'Fatima2020';   // ← exactly what you tested
+$port = 3307;                   // ← match my.ini
 
 try {
     $pdo = new PDO(
@@ -13,9 +13,10 @@ try {
         $pass,
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
 } catch (PDOException $e) {
-    die('Database connection failed');
+    die('Database connection failed: ' . $e->getMessage());
 }
