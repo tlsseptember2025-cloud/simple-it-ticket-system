@@ -100,7 +100,6 @@ $closedTickets = $closedStmt->fetchAll();
         </a> 
         <div class="ms-auto d-flex align-items-center gap-3"> 
             <a href="reports.php" class="btn btn-sm btn-outline-secondary"> 📊 Reports </a> 
-            <a href="export_monthly_pdf.php" class="btn btn-sm btn-outline-success"> 📊 Monthly Report </a> 
             <a href="run_fetch.php" class="btn btn-sm btn-outline-primary"> 📥 Fetch Emails </a> 
             <span class="text-muted"> <?php echo htmlspecialchars($_SESSION['admin_username']); ?> </span> 
             <a href="logout.php" class="text-decoration-none"> Logout </a> 
@@ -111,12 +110,7 @@ $closedTickets = $closedStmt->fetchAll();
             <?php echo $_SESSION['fetch_success']; unset($_SESSION['fetch_success']); ?> 
         </div> <?php endif; ?>
 
-<?php if (!empty($_SESSION['fetch_success'])): ?>
-<div id="fetchAlert" class="alert alert-success">
-    ✅ <?php echo htmlspecialchars($_SESSION['fetch_success']); ?>
-    <?php unset($_SESSION['fetch_success']); ?>
-</div>
-<?php endif; ?>
+
 
 <h4>Ticket Dashboard</h4>
 
@@ -265,6 +259,19 @@ function loadClosedTickets(page) {
             document.getElementById('closedTicketsContainer').innerHTML = html;
         });
 }
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const alert = document.getElementById('fetchAlert');
+    if (!alert) return;
+
+    setTimeout(() => {
+        alert.style.transition = 'opacity 0.5s ease';
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 500);
+    }, 3000);
+});
 </script>
 
 </body>
