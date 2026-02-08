@@ -114,10 +114,6 @@ $closedTickets = $closedStmt->fetchAll();
                 📥 Fetch Emails
             </a>
 
-            <a href="backup.php?backup=1" class="btn btn-sm btn-outline-primary">
-                📥 Backup Database
-            </a>
-
             <span class="text-muted">
                 <?php echo htmlspecialchars($_SESSION['admin_username']); ?>
             </span>
