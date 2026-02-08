@@ -8,22 +8,34 @@ if (isset($_GET['fetched']) && empty($_SESSION['fetch_success'])) {
     $_SESSION['fetch_success'] = 'Emails fetched successfully';
 }
 
-/* ================= PAGINATION ================= */
-
 $limit = 5;
-$page  = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
-$page  = max($page, 1);
-$offset = ($page - 1) * $limit;
 
-/* ===== COUNT TOTAL TICKETS (OPEN ONLY) ===== */
+/* ===== CURRENT PAGE ===== */
+$page = isset($_GET['page']) && is_numeric($_GET['page'])
+    ? (int) $_GET['page']
+    : 1;
+
+$page = max(1, $page);
+
+/* ===== COUNT OPEN TICKETS ===== */
 $totalStmt = $pdo->prepare("
-    SELECT COUNT(*) 
-    FROM tickets 
+    SELECT COUNT(*)
+    FROM tickets
     WHERE status != 'Closed'
 ");
 $totalStmt->execute();
-$totalTickets = (int)$totalStmt->fetchColumn();
-$totalPages   = (int)ceil($totalTickets / $limit);
+$totalTickets = (int) $totalStmt->fetchColumn();
+
+/* ===== TOTAL PAGES ===== */
+$totalPages = (int) ceil($totalTickets / $limit);
+
+/* 🔒 SAFETY: clamp page */
+if ($totalPages > 0 && $page > $totalPages) {
+    $page = $totalPages;
+}
+
+/* ===== OFFSET ===== */
+$offset = ($page - 1) * $limit;
 
 /* ===== FETCH OPEN TICKETS ===== */
 $stmt = $pdo->prepare("
@@ -36,6 +48,7 @@ $stmt = $pdo->prepare("
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
+
 $tickets = $stmt->fetchAll();
 
 /* ================= CLOSED TICKETS (MODAL) ================= */
@@ -81,15 +94,22 @@ $closedTickets = $closedStmt->fetchAll();
 <body class="bg-light">
 
 <div class="container py-4">
-
-<!-- NAVBAR (UNCHANGED) -->
-<nav class="navbar navbar-expand-lg bg-white shadow-sm rounded mb-4 px-3">
-    <a class="navbar-brand fw-semibold" href="dashboard.php">IT Support</a>
-    <div class="ms-auto">
-        <?php echo htmlspecialchars($_SESSION['admin_username']); ?> |
-        <a href="logout.php">Logout</a>
-    </div>
-</nav>
+    <nav class="navbar navbar-expand-lg bg-white shadow-sm rounded mb-4 px-3"> 
+        <a class="navbar-brand d-flex align-items-center fw-semibold" href="dashboard.php"> 
+            <img src="../public/assets/company-logo.png" alt="Company Logo" height="32" class="me-2" > IT Support 
+        </a> 
+        <div class="ms-auto d-flex align-items-center gap-3"> 
+            <a href="reports.php" class="btn btn-sm btn-outline-secondary"> 📊 Reports </a> 
+            <a href="export_monthly_pdf.php" class="btn btn-sm btn-outline-success"> 📊 Monthly Report </a> 
+            <a href="run_fetch.php" class="btn btn-sm btn-outline-primary"> 📥 Fetch Emails </a> 
+            <span class="text-muted"> <?php echo htmlspecialchars($_SESSION['admin_username']); ?> </span> 
+            <a href="logout.php" class="text-decoration-none"> Logout </a> 
+        </div> 
+    </nav>
+    <?php if (!empty($_SESSION['fetch_success'])): ?> 
+        <div id="fetchAlert" class="alert alert-success alert-dismissible fade show"> 
+            <?php echo $_SESSION['fetch_success']; unset($_SESSION['fetch_success']); ?> 
+        </div> <?php endif; ?>
 
 <?php if (!empty($_SESSION['fetch_success'])): ?>
 <div id="fetchAlert" class="alert alert-success">
@@ -141,6 +161,41 @@ $closedTickets = $closedStmt->fetchAll();
 </tbody>
 </table>
 </div>
+
+<?php if ($totalPages >= 1): ?>
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+
+        <!-- Previous -->
+        <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?page=<?php echo max(1, $page - 1); ?>">
+                Previous
+            </a>
+        </li>
+
+        <!-- Page Numbers -->
+        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+            <li class="page-item <?php echo ($i === $page) ? 'active' : ''; ?>">
+                <a class="page-link" href="?page=<?php echo $i; ?>">
+                    <?php echo $i; ?>
+                </a>
+            </li>
+        <?php endfor; ?>
+
+        <!-- Next -->
+        <li class="page-item <?php echo ($page >= $totalPages) ? 'disabled' : ''; ?>">
+            <a class="page-link" href="?page=<?php echo min($totalPages, $page + 1); ?>">
+                Next
+            </a>
+        </li>
+
+    </ul>
+</nav>
+<?php endif; ?>
+
+<br>
+<a href="backup.php?backup=1" class="btn btn-sm btn-outline-primary"> 📥 Backup Database </a>
+
 </div>
 
 <!-- CLOSED TICKETS MODAL -->
