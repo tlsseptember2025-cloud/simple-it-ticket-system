@@ -86,6 +86,27 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
     }
 
     if ($filename) {
+
+        // ❌ Ignore common signature/logo images
+        $lowerName = strtolower($filename);
+
+        $ignorePatterns = [
+            'logo',
+            'signature',
+            'facebook',
+            'linkedin',
+            'twitter',
+            'instagram',
+            'image001',
+            'image002'
+        ];
+
+        foreach ($ignorePatterns as $pattern) {
+            if (strpos($lowerName, $pattern) !== false) {
+                return; // skip this attachment
+                }
+        }
+
         $body = imap_fetchbody($mailbox, $emailNumber, $partNumber ?: 1);
         if ($structure->encoding == 3) $body = base64_decode($body);
         if ($structure->encoding == 4) $body = quoted_printable_decode($body);
@@ -98,6 +119,14 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
 
             $safe = uniqid().'_'.preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
             file_put_contents($dir.$safe, $body);
+
+            // ❌ Skip inline images (email signatures)
+            if (
+                isset($structure->disposition) &&
+                strtolower($structure->disposition) === 'inline'
+            ) {
+                return;
+            }
 
             $pdo->prepare("
                 INSERT INTO attachments (ticket_id, filename, filepath)
