@@ -7,7 +7,6 @@ require 'lib/fpdf/fpdf.php';
 /* ================= LOAD MAIL CONFIG ================= */
 
 $config = require '../config/mail.php';
-
 $reportRecipients = $config['report_recipients'] ?? [];
 
 if (empty($reportRecipients)) {
@@ -49,9 +48,82 @@ $ticketsStmt = $pdo->prepare("
 $ticketsStmt->execute([$startDate, $endDate]);
 $tickets = $ticketsStmt->fetchAll();
 
+/* ================= CUSTOM PDF CLASS ================= */
+
+class ReportPDF extends FPDF
+{
+    protected $widths;
+    protected $lineHeight = 6;
+
+    function SetWidths($w)
+    {
+        $this->widths = $w;
+    }
+
+    function NbLines($w, $txt)
+    {
+        $cw = $this->CurrentFont['cw'];
+        $wmax = ($w - 2 * $this->cMargin) * 1000 / $this->FontSize;
+        $s = str_replace("\r", '', (string)$txt);
+        $nb = strlen($s);
+        if ($nb > 0 && $s[$nb - 1] == "\n") $nb--;
+        $sep = -1;
+        $i = 0;
+        $j = 0;
+        $l = 0;
+        $nl = 1;
+
+        while ($i < $nb) {
+            $c = $s[$i];
+            if ($c == "\n") {
+                $i++; $sep = -1; $j = $i; $l = 0; $nl++;
+                continue;
+            }
+            if ($c == ' ') $sep = $i;
+            $l += $cw[$c] ?? 0;
+            if ($l > $wmax) {
+                if ($sep == -1) {
+                    if ($i == $j) $i++;
+                } else {
+                    $i = $sep + 1;
+                }
+                $sep = -1;
+                $j = $i;
+                $l = 0;
+                $nl++;
+            } else {
+                $i++;
+            }
+        }
+        return $nl;
+    }
+
+    function Row($data)
+    {
+        $nb = 1;
+        for ($i = 0; $i < count($data); $i++) {
+            $nb = max($nb, $this->NbLines($this->widths[$i], $data[$i]));
+        }
+        $h = $this->lineHeight * $nb;
+
+        if ($this->GetY() + $h > $this->PageBreakTrigger) {
+            $this->AddPage($this->CurOrientation);
+        }
+
+        for ($i = 0; $i < count($data); $i++) {
+            $x = $this->GetX();
+            $y = $this->GetY();
+            $this->Rect($x, $y, $this->widths[$i], $h);
+            $this->MultiCell($this->widths[$i], $this->lineHeight, $data[$i], 0);
+            $this->SetXY($x + $this->widths[$i], $y);
+        }
+        $this->Ln($h);
+    }
+}
+
 /* ================= CREATE PDF ================= */
 
-$pdf = new FPDF('L', 'mm', 'A4');
+$pdf = new ReportPDF('L', 'mm', 'A4');
 $pdf->AddPage();
 
 /* Logo */
@@ -85,27 +157,21 @@ $pdf->Ln(6);
 
 /* Table Header */
 $pdf->SetFont('Helvetica', 'B', 10);
-$pdf->Cell(45, 8, 'Ticket #', 1);
-$pdf->Cell(70, 8, 'From', 1);
-$pdf->Cell(95, 8, 'Subject', 1);
-$pdf->Cell(30, 8, 'Status', 1);
-$pdf->Cell(37, 8, 'Created', 1);
-$pdf->Ln();
+$pdf->SetWidths([45, 70, 95, 30, 37]);
+
+$pdf->Row(['Ticket #', 'From', 'Subject', 'Status', 'Created']);
 
 /* Table Rows */
 $pdf->SetFont('Helvetica', '', 9);
 
-if (empty($tickets)) {
-    $pdf->Cell(277, 10, 'No tickets found for this month.', 1, 1, 'C');
-} else {
-    foreach ($tickets as $t) {
-        $pdf->Cell(45, 8, $t['ticket_number'], 1);
-        $pdf->Cell(70, 8, substr($t['sender_email'], 0, 40), 1);
-        $pdf->Cell(95, 8, substr($t['subject'], 0, 60), 1);
-        $pdf->Cell(30, 8, $t['status'], 1);
-        $pdf->Cell(37, 8, date('D, M j, Y', strtotime($t['created_at'])), 1);
-        $pdf->Ln();
-    }
+foreach ($tickets as $t) {
+    $pdf->Row([
+        $t['ticket_number'],
+        $t['sender_email'],
+        $t['subject'],
+        $t['status'],
+        date('D, M j, Y', strtotime($t['created_at']))
+    ]);
 }
 
 /* ================= SAVE PDF ================= */
@@ -117,7 +183,6 @@ if (!is_dir($reportsDir)) {
 
 $filename = "IT_Monthly_Report_" . date('F_Y', strtotime($startDate)) . ".pdf";
 $filePath = $reportsDir . $filename;
-
 $pdf->Output('F', $filePath);
 
 /* ================= EMAIL REPORT ================= */
@@ -129,24 +194,12 @@ Hello Team,
 
 Please find attached the IT Support Monthly Report for $monthLabel.
 
-Summary:
-- Total Tickets: {$summary['total']}
-- Open: {$summary['open']}
-- In Progress: {$summary['in_progress']}
-- Waiting: {$summary['waiting']}
-- Closed: {$summary['closed']}
-
 Regards,
 IT Support System
 ";
 
 foreach ($reportRecipients as $recipient) {
-    sendMail(
-        $recipient,
-        $emailSubject,
-        $emailBody,
-        $filePath
-    );
+    sendMail($recipient, $emailSubject, $emailBody, $filePath);
 }
 
 /* ================= REDIRECT BACK ================= */
