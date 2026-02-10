@@ -8,7 +8,7 @@ if (isset($_GET['fetched']) && empty($_SESSION['fetch_success'])) {
     $_SESSION['fetch_success'] = 'Emails fetched successfully';
 }
 
-$limit = 5;
+$limit = 10;
 
 /* ===== CURRENT PAGE ===== */
 $page = isset($_GET['page']) && is_numeric($_GET['page'])
@@ -53,7 +53,7 @@ $tickets = $stmt->fetchAll();
 
 /* ================= CLOSED TICKETS (MODAL) ================= */
 
-$closedLimit = 5;
+$closedLimit = 10;
 $closedPage  = isset($_GET['closed_page']) && is_numeric($_GET['closed_page'])
     ? (int)$_GET['closed_page']
     : 1;

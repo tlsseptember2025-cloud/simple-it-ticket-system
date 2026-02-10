@@ -2,7 +2,7 @@
 require '../config/db.php';
 
 $page  = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$limit = 5;
+$limit = 10;
 $offset = ($page - 1) * $limit;
 
 /* Total closed tickets */
