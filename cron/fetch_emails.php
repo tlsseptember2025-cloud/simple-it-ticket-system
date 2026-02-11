@@ -176,6 +176,24 @@ foreach ($emails as $emailNumber) {
     if (!str_ends_with($fromEmail, $allowedDomain)) continue;
     if ($fromEmail === strtolower($imapUser)) continue;
 
+    /* ===== CHECK THAT EMAIL IS SENT DIRECTLY TO ME (NOT ONLY CC) ===== */
+
+    $toMatch = false;
+
+    if (!empty($headers->to)) {
+        foreach ($headers->to as $to) {
+            $toEmail = strtolower($to->mailbox . '@' . $to->host);
+            if ($toEmail === strtolower($imapUser)) {
+                $toMatch = true;
+                break;
+            }
+        }
+    }
+
+    if (!$toMatch) {
+        continue; // Skip emails not directly sent to me
+    }
+
     $subjectClean = normalizeSubject($overview->subject ?? '(No Subject)');
     $structure = imap_fetchstructure($mailbox, $emailNumber);
 

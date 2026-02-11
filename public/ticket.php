@@ -9,6 +9,15 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $ticketId = (int) $_GET['id'];
 
+// Mark updates as read when admin opens ticket
+$markRead = $pdo->prepare("
+    UPDATE updates
+    SET sent_to_user = 1
+    WHERE ticket_id = ?
+");
+$markRead->execute([$ticketId]);
+
+
 /* ================= FETCH TICKET ================= */
 
 $stmt = $pdo->prepare("SELECT * FROM tickets WHERE id = ?");

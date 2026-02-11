@@ -38,13 +38,27 @@ if ($totalPages > 0 && $page > $totalPages) {
 $offset = ($page - 1) * $limit;
 
 /* ===== FETCH OPEN TICKETS ===== */
+
 $stmt = $pdo->prepare("
-    SELECT id, ticket_number, sender_email, subject, status, created_at
-    FROM tickets
+    SELECT 
+        t.id, 
+        t.ticket_number, 
+        t.sender_email, 
+        t.subject, 
+        t.status, 
+        t.created_at,
+        (
+            SELECT COUNT(*) 
+            FROM updates u 
+            WHERE u.ticket_id = t.id 
+              AND u.sent_to_user = 0
+        ) AS user_updates
+    FROM tickets t
     WHERE status != 'Closed'
     ORDER BY created_at DESC
     LIMIT :limit OFFSET :offset
 ");
+
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
@@ -148,7 +162,48 @@ $closedTickets = $closedStmt->fetchAll();
 <td><a href="ticket.php?id=<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['ticket_number']); ?></a></td>
 <td><?php echo htmlspecialchars($t['sender_email']); ?></td>
 <td><?php echo htmlspecialchars($t['subject']); ?></td>
-<td><?php echo htmlspecialchars($t['status']); ?></td>
+<td>
+
+<?php
+$status = $t['status'];
+$hasUpdate = ($t['user_updates'] > 0);
+
+/* ===== NORMAL STATUS COLORS ===== */
+switch ($status) {
+    case 'Open':
+        $badgeClass = 'primary';      // Blue
+        break;
+
+    case 'Waiting':
+        $badgeClass = 'warning';      // Orange
+        break;
+
+    case 'In Progress':
+        $badgeClass = 'info';         // Light Blue
+        break;
+
+    case 'Closed':
+        $badgeClass = 'success';      // Green
+        break;
+
+    default:
+        $badgeClass = 'secondary';
+}
+
+/* ===== IF NEW UPDATE → FORCE RED ===== */
+if ($hasUpdate) {
+    $badgeClass = 'danger';
+}
+?>
+
+<span class="badge bg-<?php echo $badgeClass; ?>">
+    <?php echo htmlspecialchars($status); ?>
+    <?php if ($hasUpdate): ?>
+        (New)
+    <?php endif; ?>
+</span>
+
+</td>
 <td><?php echo date('M j, Y g:i A', strtotime($t['created_at'])); ?></td>
 </tr>
 <?php endforeach; endif; ?>
@@ -273,6 +328,29 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 3000);
 });
 </script>
+
+<script>
+let lastChange = 0;
+
+// First load — get initial timestamp
+fetch('check_updates.php')
+    .then(res => res.json())
+    .then(data => {
+        lastChange = data.last_change;
+    });
+
+// Check every 30 seconds
+setInterval(() => {
+    fetch('check_updates.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.last_change > lastChange) {
+                location.reload();
+            }
+        });
+}, 30000);
+</script>
+
 
 </body>
 </html>
