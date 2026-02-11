@@ -215,11 +215,15 @@ if (!empty($_FILES['attachments']['name'][0])) {
         }
 
         // Notify staff/admin
+        
+        /*
         sendMail(
             $_SESSION['admin_username'] . '@loopsautomation.com',
             "Admin update on {$ticket['ticket_number']}",
             "An update was added:\n\n$message"
         );
+        */
+        
     }
 
     header("Location: dashboard.php");

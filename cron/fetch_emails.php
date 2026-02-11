@@ -112,7 +112,17 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
         if ($structure->encoding == 4) $body = quoted_printable_decode($body);
 
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if ($body && in_array($ext, ['jpg','jpeg','png','gif','pdf'])) {
+
+        $allowed = [
+            'jpg','jpeg','png','gif','pdf',
+            'doc','docx',
+            'xls','xlsx',
+            'csv',
+            'txt',
+            'zip'
+        ];
+
+        if ($body && in_array($ext, $allowed)) {
 
             $dir = __DIR__ . '/../uploads/tickets/';
             if (!is_dir($dir)) mkdir($dir, 0777, true);
