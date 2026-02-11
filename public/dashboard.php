@@ -158,6 +158,17 @@ $closedStmt->bindValue(':limit', $closedLimit, PDO::PARAM_INT);
 $closedStmt->bindValue(':offset', $closedOffset, PDO::PARAM_INT);
 $closedStmt->execute();
 $closedTickets = $closedStmt->fetchAll();
+
+/* ================= TOTAL & COMPLETION ================= */
+
+$totalTicketsAll = $openCount + $inProgressCount + $waitingCount + $closedCount;
+
+$completionRate = 0;
+
+if ($totalTicketsAll > 0) {
+    $completionRate = round(($closedCount / $totalTicketsAll) * 100);
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -191,110 +202,36 @@ $closedTickets = $closedStmt->fetchAll();
 
 <h4>Ticket Dashboard</h4>
 
-<div class="row mb-4 g-3">
+<div class="card shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center small">
 
-    <!-- TOTAL TICKETS -->
-   <!-- TOTAL BY CATEGORY -->
-<div class="col-md-3">
-    <div class="card shadow-sm h-100 border-start border-4 border-dark bg-light">
-        <div class="card-body">
-            <h6 class="fw-bold text-dark">
-                🎫 Active Tickets
-            </h6>
-
-            <div class="mt-2">
-
-                <div class="d-flex justify-content-between mb-1">
-                    <span class="text-success fw-semibold">Open</span>
-                    <span class="badge bg-success"><?php echo $openCount; ?></span>
-                </div>
-
-                <div class="d-flex justify-content-between mb-1">
-                    <span class="text-primary fw-semibold">In Progress</span>
-                    <span class="badge bg-primary"><?php echo $inProgressCount; ?></span>
-                </div>
-
-                <div class="d-flex justify-content-between mb-1">
-                    <span class="text-warning fw-semibold">Waiting</span>
-                    <span class="badge bg-warning text-dark"><?php echo $waitingCount; ?></span>
-                </div>
-
-                <div class="d-flex justify-content-between">
-                    <span class="text-secondary fw-semibold">Closed</span>
-                    <span class="badge bg-secondary"><?php echo $closedCount; ?></span>
-                </div>
-
-            </div>
-
+        <div class="me-4 mb-2">
+            🟢 <strong>First:</strong>
+            <?php echo $firstTicket['ticket_number'] ?? '-'; ?>
         </div>
+
+        <div class="me-4 mb-2">
+            🚀 <strong>Last:</strong>
+            <?php echo $lastTicket['ticket_number'] ?? '-'; ?>
+        </div>
+
+        <div class="me-4 mb-2">
+            📊 <strong>Avg (<?php echo date('F Y'); ?>):</strong>
+            <?php echo $avgPerDay; ?>/day
+        </div>
+
+        <div class="me-4 mb-2">
+            📦 <strong>Total:</strong>
+            <?php echo $totalTicketsAll; ?>
+        </div>
+
+        <div class="mb-2">
+            ✅ <strong>Completion:</strong>
+            <?php echo $completionRate; ?>%
+        </div>
+
     </div>
 </div>
-
-    <!-- FIRST TICKET -->
-    <div class="col-md-3">
-        <div class="card shadow-sm h-100 border-start border-4 border-primary bg-light">
-            <div class="card-body">
-                <h6 class="fw-bold text-primary">
-                    📅 First Ticket Issued
-                </h6>
-
-                <?php if ($firstTicket): ?>
-                    <div class="fw-semibold">
-                        <?php echo htmlspecialchars($firstTicket['ticket_number']); ?>
-                    </div>
-                    <small class="text-muted">
-                        <?php echo date('M j, Y g:i A', strtotime($firstTicket['created_at'])); ?>
-                    </small>
-                <?php else: ?>
-                    <span class="text-muted">No tickets yet</span>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- LAST TICKET -->
-    <div class="col-md-3">
-        <div class="card shadow-sm h-100 border-start border-4 border-success bg-light">
-            <div class="card-body">
-                <h6 class="fw-bold text-success">
-                    🚀 Last Ticket Issued
-                </h6>
-
-                <?php if ($lastTicket): ?>
-                    <div class="fw-semibold">
-                        <?php echo htmlspecialchars($lastTicket['ticket_number']); ?>
-                    </div>
-                    <small class="text-muted">
-                        <?php echo date('M j, Y g:i A', strtotime($lastTicket['created_at'])); ?>
-                    </small>
-                <?php else: ?>
-                    <span class="text-muted">No tickets yet</span>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- AVERAGE -->
-    <div class="col-md-3">
-        <div class="card shadow-sm h-100 border-start border-4 border-warning bg-light">
-            <div class="card-body">
-                <h6 class="fw-bold text-warning">
-                    📈 Avg Tickets / Day
-                </h6>
-
-                <div class="fw-semibold">
-                    <?php echo "$monthLabel - $avgPerDay tickets/day"; ?>
-                </div>
-
-                <small class="text-muted">
-                    Current month performance
-                </small>
-            </div>
-        </div>
-    </div>
-
-</div>
-
 
 <?php if ($totalClosed > 0): ?>
 <div class="alert alert-info d-flex justify-content-between align-items-center">
