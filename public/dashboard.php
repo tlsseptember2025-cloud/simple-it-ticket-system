@@ -8,7 +8,7 @@ if (isset($_GET['fetched']) && empty($_SESSION['fetch_success'])) {
     $_SESSION['fetch_success'] = 'Emails fetched successfully';
 }
 
-$limit = 10;
+$limit = 5;
 
 /* ===== CURRENT PAGE ===== */
 $page = isset($_GET['page']) && is_numeric($_GET['page'])
@@ -64,6 +64,69 @@ $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
 
 $tickets = $stmt->fetchAll();
+
+/* ================= CATEGORY COUNTS ================= */
+
+$categoryStmt = $pdo->query("
+    SELECT 
+        SUM(status = 'Open') AS open_count,
+        SUM(status = 'In Progress') AS in_progress_count,
+        SUM(status = 'Waiting') AS waiting_count,
+        SUM(status = 'Closed') AS closed_count
+    FROM tickets
+");
+
+$categoryCounts = $categoryStmt->fetch(PDO::FETCH_ASSOC);
+
+$openCount        = (int) ($categoryCounts['open_count'] ?? 0);
+$inProgressCount  = (int) ($categoryCounts['in_progress_count'] ?? 0);
+$waitingCount     = (int) ($categoryCounts['waiting_count'] ?? 0);
+$closedCount      = (int) ($categoryCounts['closed_count'] ?? 0);
+
+/* ================= DASHBOARD STATS ================= */
+
+/* ----- First Ticket Issued ----- */
+$firstStmt = $pdo->query("
+    SELECT ticket_number, created_at 
+    FROM tickets 
+    ORDER BY created_at ASC 
+    LIMIT 1
+");
+$firstTicket = $firstStmt->fetch();
+
+/* ----- Last Ticket Issued ----- */
+$lastStmt = $pdo->query("
+    SELECT ticket_number, created_at 
+    FROM tickets 
+    ORDER BY created_at DESC 
+    LIMIT 1
+");
+$lastTicket = $lastStmt->fetch();
+
+/* ----- Monthly Average Tickets ----- */
+$currentMonth = date('m');
+$currentYear  = date('Y');
+
+$monthStart = date('Y-m-01');
+$monthEnd   = date('Y-m-t');
+
+/* Total tickets this month */
+$monthStmt = $pdo->prepare("
+    SELECT COUNT(*) 
+    FROM tickets 
+    WHERE DATE(created_at) BETWEEN ? AND ?
+");
+$monthStmt->execute([$monthStart, $monthEnd]);
+$monthTotal = (int)$monthStmt->fetchColumn();
+
+/* Days passed in current month */
+$daysPassed = (int)date('j'); // today number in month
+
+$avgPerDay = $daysPassed > 0 
+    ? (int) ceil($monthTotal / $daysPassed)
+    : 0;
+
+$monthLabel = date('F Y');
 
 /* ================= CLOSED TICKETS (MODAL) ================= */
 
@@ -127,6 +190,111 @@ $closedTickets = $closedStmt->fetchAll();
 
 
 <h4>Ticket Dashboard</h4>
+
+<div class="row mb-4 g-3">
+
+    <!-- TOTAL TICKETS -->
+   <!-- TOTAL BY CATEGORY -->
+<div class="col-md-3">
+    <div class="card shadow-sm h-100 border-start border-4 border-dark bg-light">
+        <div class="card-body">
+            <h6 class="fw-bold text-dark">
+                🎫 Active Tickets
+            </h6>
+
+            <div class="mt-2">
+
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-success fw-semibold">Open</span>
+                    <span class="badge bg-success"><?php echo $openCount; ?></span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-primary fw-semibold">In Progress</span>
+                    <span class="badge bg-primary"><?php echo $inProgressCount; ?></span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-warning fw-semibold">Waiting</span>
+                    <span class="badge bg-warning text-dark"><?php echo $waitingCount; ?></span>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <span class="text-secondary fw-semibold">Closed</span>
+                    <span class="badge bg-secondary"><?php echo $closedCount; ?></span>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+    <!-- FIRST TICKET -->
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100 border-start border-4 border-primary bg-light">
+            <div class="card-body">
+                <h6 class="fw-bold text-primary">
+                    📅 First Ticket Issued
+                </h6>
+
+                <?php if ($firstTicket): ?>
+                    <div class="fw-semibold">
+                        <?php echo htmlspecialchars($firstTicket['ticket_number']); ?>
+                    </div>
+                    <small class="text-muted">
+                        <?php echo date('M j, Y g:i A', strtotime($firstTicket['created_at'])); ?>
+                    </small>
+                <?php else: ?>
+                    <span class="text-muted">No tickets yet</span>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- LAST TICKET -->
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100 border-start border-4 border-success bg-light">
+            <div class="card-body">
+                <h6 class="fw-bold text-success">
+                    🚀 Last Ticket Issued
+                </h6>
+
+                <?php if ($lastTicket): ?>
+                    <div class="fw-semibold">
+                        <?php echo htmlspecialchars($lastTicket['ticket_number']); ?>
+                    </div>
+                    <small class="text-muted">
+                        <?php echo date('M j, Y g:i A', strtotime($lastTicket['created_at'])); ?>
+                    </small>
+                <?php else: ?>
+                    <span class="text-muted">No tickets yet</span>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- AVERAGE -->
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100 border-start border-4 border-warning bg-light">
+            <div class="card-body">
+                <h6 class="fw-bold text-warning">
+                    📈 Avg Tickets / Day
+                </h6>
+
+                <div class="fw-semibold">
+                    <?php echo "$monthLabel - $avgPerDay tickets/day"; ?>
+                </div>
+
+                <small class="text-muted">
+                    Current month performance
+                </small>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 
 <?php if ($totalClosed > 0): ?>
 <div class="alert alert-info d-flex justify-content-between align-items-center">
