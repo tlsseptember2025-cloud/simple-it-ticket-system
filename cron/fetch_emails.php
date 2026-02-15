@@ -91,14 +91,14 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
         $lowerName = strtolower($filename);
 
         $ignorePatterns = [
-            'logo',
-            'signature',
-            'facebook',
-            'linkedin',
-            'twitter',
-            'instagram',
-            'image001',
-            'image002'
+                'logo',
+                'signature',
+                'facebook',
+                'linkedin',
+                'twitter',
+                'instagram',
+                'image001',
+                'image002'
         ];
 
         foreach ($ignorePatterns as $pattern) {
@@ -130,13 +130,7 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
             $safe = uniqid().'_'.preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
             file_put_contents($dir.$safe, $body);
 
-            // ❌ Skip inline images (email signatures)
-            if (
-                isset($structure->disposition) &&
-                strtolower($structure->disposition) === 'inline'
-            ) {
-                return;
-            }
+           
 
             $pdo->prepare("
                 INSERT INTO attachments (ticket_id, filename, filepath)
@@ -205,6 +199,8 @@ foreach ($emails as $emailNumber) {
     }
 
     $subjectClean = normalizeSubject($overview->subject ?? '(No Subject)');
+    $originalSubject = $overview->subject ?? '';
+
     $structure = imap_fetchstructure($mailbox, $emailNumber);
 
     $body = cleanMessage(
@@ -243,6 +239,12 @@ foreach ($emails as $emailNumber) {
     }
 
     /* ===== NEW TICKET ===== */
+
+    /* ===== IGNORE REPLIES THAT ARE NOT TICKETS ===== */
+
+    if (preg_match('/^(re|fw|fwd)\s*:/i', $originalSubject)) {
+        continue; // Skip replies to non-ticket emails
+    }
 
     $ticketNumber = 'LA-Support-'.date('Y').'-'.strtoupper(bin2hex(random_bytes(4)));
     $statusToken  = bin2hex(random_bytes(16));

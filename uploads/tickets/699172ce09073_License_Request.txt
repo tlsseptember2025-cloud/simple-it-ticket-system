@@ -1,0 +1,10 @@
+Version: 2.3.1.0
+
+Machine Name: METERING-SER01
+
+Product Name: UNCERTAINTYPLUS.net
+
+Name: [Ethernet], Description: [Intel(R) Ethernet Connection (17) I219-LM], Physical Address: [D843AEE3C29A]
+
+Name: [Loopback Pseudo-Interface 1], Description: [Software Loopback Interface 1], Physical Address: []
+
