@@ -75,6 +75,7 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
 {
     $filename = null;
 
+    // Try to get filename normally
     foreach (['dparameters','parameters'] as $ptype) {
         if (!empty($structure->$ptype)) {
             foreach ($structure->$ptype as $p) {
@@ -85,29 +86,16 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
         }
     }
 
+    // If no filename but it's an image → generate one
+    if (!$filename && $structure->type == 5) { // TYPE IMAGE
+        $ext = strtolower($structure->subtype ?? 'jpg');
+        $filename = 'inline_' . uniqid() . '.' . $ext;
+    }
+
     if ($filename) {
 
-        // ❌ Ignore common signature/logo images
-        $lowerName = strtolower($filename);
-
-        $ignorePatterns = [
-                'logo',
-                'signature',
-                'facebook',
-                'linkedin',
-                'twitter',
-                'instagram',
-                'image001',
-                'image002'
-        ];
-
-        foreach ($ignorePatterns as $pattern) {
-            if (strpos($lowerName, $pattern) !== false) {
-                return; // skip this attachment
-                }
-        }
-
         $body = imap_fetchbody($mailbox, $emailNumber, $partNumber ?: 1);
+
         if ($structure->encoding == 3) $body = base64_decode($body);
         if ($structure->encoding == 4) $body = quoted_printable_decode($body);
 
@@ -129,8 +117,6 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
 
             $safe = uniqid().'_'.preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
             file_put_contents($dir.$safe, $body);
-
-           
 
             $pdo->prepare("
                 INSERT INTO attachments (ticket_id, filename, filepath)
@@ -180,10 +166,7 @@ foreach ($emails as $emailNumber) {
     if (!str_ends_with($fromEmail, $allowedDomain)) continue;
     if ($fromEmail === strtolower($imapUser)) continue;
 
-    /* ===== CHECK THAT EMAIL IS SENT DIRECTLY TO ME (NOT ONLY CC) ===== */
-
     $toMatch = false;
-
     if (!empty($headers->to)) {
         foreach ($headers->to as $to) {
             $toEmail = strtolower($to->mailbox . '@' . $to->host);
@@ -194,13 +177,10 @@ foreach ($emails as $emailNumber) {
         }
     }
 
-    if (!$toMatch) {
-        continue; // Skip emails not directly sent to me
-    }
+    if (!$toMatch) continue;
 
     $subjectClean = normalizeSubject($overview->subject ?? '(No Subject)');
     $originalSubject = $overview->subject ?? '';
-
     $structure = imap_fetchstructure($mailbox, $emailNumber);
 
     $body = cleanMessage(
@@ -238,13 +218,12 @@ foreach ($emails as $emailNumber) {
         }
     }
 
-    /* ===== NEW TICKET ===== */
-
-    /* ===== IGNORE REPLIES THAT ARE NOT TICKETS ===== */
-
+    /* ===== IGNORE NON-TICKET REPLIES ===== */
     if (preg_match('/^(re|fw|fwd)\s*:/i', $originalSubject)) {
-        continue; // Skip replies to non-ticket emails
+        continue;
     }
+
+    /* ===== NEW TICKET ===== */
 
     $ticketNumber = 'LA-Support-'.date('Y').'-'.strtoupper(bin2hex(random_bytes(4)));
     $statusToken  = bin2hex(random_bytes(16));

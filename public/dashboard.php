@@ -10,6 +10,11 @@ if (isset($_GET['fetched']) && empty($_SESSION['fetch_success'])) {
 
 $limit = 5;
 
+/* ===== SEARCH FILTER ===== */
+
+$searchEmail = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+
 /* ===== CURRENT PAGE ===== */
 $page = isset($_GET['page']) && is_numeric($_GET['page'])
     ? (int) $_GET['page']
@@ -18,12 +23,28 @@ $page = isset($_GET['page']) && is_numeric($_GET['page'])
 $page = max(1, $page);
 
 /* ===== COUNT OPEN TICKETS ===== */
-$totalStmt = $pdo->prepare("
-    SELECT COUNT(*)
-    FROM tickets
-    WHERE status != 'Closed'
-");
+if ($searchEmail !== '') {
+
+    $totalStmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM tickets
+        WHERE sender_email LIKE :search
+    ");
+
+    $totalStmt->bindValue(':search', "%$searchEmail%");
+
+} else {
+
+    $totalStmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM tickets
+        WHERE status != 'Closed'
+    ");
+}
+
 $totalStmt->execute();
+$totalTickets = (int) $totalStmt->fetchColumn();
+
 $totalTickets = (int) $totalStmt->fetchColumn();
 
 /* ===== TOTAL PAGES ===== */
@@ -38,26 +59,52 @@ if ($totalPages > 0 && $page > $totalPages) {
 $offset = ($page - 1) * $limit;
 
 /* ===== FETCH OPEN TICKETS ===== */
+if ($searchEmail !== '') {
 
-$stmt = $pdo->prepare("
-    SELECT 
-        t.id, 
-        t.ticket_number, 
-        t.sender_email, 
-        t.subject, 
-        t.status, 
-        t.created_at,
-        (
-            SELECT COUNT(*) 
-            FROM updates u 
-            WHERE u.ticket_id = t.id 
-              AND u.sent_to_user = 0
-        ) AS user_updates
-    FROM tickets t
-    WHERE status != 'Closed'
-    ORDER BY created_at DESC
-    LIMIT :limit OFFSET :offset
-");
+    $stmt = $pdo->prepare("
+        SELECT 
+            t.id, 
+            t.ticket_number, 
+            t.sender_email, 
+            t.subject, 
+            t.status, 
+            t.created_at,
+            (
+                SELECT COUNT(*) 
+                FROM updates u 
+                WHERE u.ticket_id = t.id 
+                  AND u.sent_to_user = 0
+            ) AS user_updates
+        FROM tickets t
+        WHERE sender_email LIKE :search
+        ORDER BY created_at DESC
+        LIMIT :limit OFFSET :offset
+    ");
+
+    $stmt->bindValue(':search', "%$searchEmail%");
+
+} else {
+
+    $stmt = $pdo->prepare("
+        SELECT 
+            t.id, 
+            t.ticket_number, 
+            t.sender_email, 
+            t.subject, 
+            t.status, 
+            t.created_at,
+            (
+                SELECT COUNT(*) 
+                FROM updates u 
+                WHERE u.ticket_id = t.id 
+                  AND u.sent_to_user = 0
+            ) AS user_updates
+        FROM tickets t
+        WHERE status != 'Closed'
+        ORDER BY created_at DESC
+        LIMIT :limit OFFSET :offset
+    ");
+}
 
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
@@ -202,6 +249,34 @@ if ($totalTicketsAll > 0) {
 
 <h4>Ticket Dashboard</h4>
 
+<!-- SEARCH BOX -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-center">
+
+            <div class="col-md-4">
+                <input 
+                    type="text" 
+                    name="search" 
+                    class="form-control" 
+                    placeholder="Search by staff email..."
+                    value="<?php echo htmlspecialchars($searchEmail); ?>"
+                >
+            </div>
+
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    🔍 Search
+                </button>
+                <a href="dashboard.php" class="btn btn-secondary btn-sm">
+                    Reset
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
 <div class="card shadow-sm mb-4">
     <div class="card-body d-flex flex-wrap justify-content-between align-items-center small">
 
@@ -322,7 +397,7 @@ if ($hasUpdate) {
 
         <!-- Previous -->
         <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?page=<?php echo max(1, $page - 1); ?>">
+            <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($searchEmail); ?>">
                 Previous
             </a>
         </li>
@@ -330,7 +405,7 @@ if ($hasUpdate) {
         <!-- Page Numbers -->
         <?php for ($i = 1; $i <= $totalPages; $i++): ?>
             <li class="page-item <?php echo ($i === $page) ? 'active' : ''; ?>">
-                <a class="page-link" href="?page=<?php echo $i; ?>">
+                <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($searchEmail); ?>">
                     <?php echo $i; ?>
                 </a>
             </li>
@@ -338,7 +413,7 @@ if ($hasUpdate) {
 
         <!-- Next -->
         <li class="page-item <?php echo ($page >= $totalPages) ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?page=<?php echo min($totalPages, $page + 1); ?>">
+            <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($searchEmail); ?>">
                 Next
             </a>
         </li>
