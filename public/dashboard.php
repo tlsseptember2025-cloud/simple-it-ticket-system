@@ -11,9 +11,7 @@ if (isset($_GET['fetched']) && empty($_SESSION['fetch_success'])) {
 $limit = 5;
 
 /* ===== SEARCH FILTER ===== */
-
 $searchEmail = isset($_GET['search']) ? trim($_GET['search']) : '';
-
 
 /* ===== CURRENT PAGE ===== */
 $page = isset($_GET['page']) && is_numeric($_GET['page'])
@@ -43,15 +41,15 @@ if ($searchEmail !== '') {
 }
 
 $totalStmt->execute();
-$totalTickets = (int) $totalStmt->fetchColumn();
-
-$totalTickets = (int) $totalStmt->fetchColumn();
+$totalTickets = (int) $totalStmt->fetchColumn(); // ✅ FIXED (removed duplicate)
 
 /* ===== TOTAL PAGES ===== */
-$totalPages = (int) ceil($totalTickets / $limit);
+$totalPages = ($totalTickets > 0)
+    ? (int) ceil($totalTickets / $limit)
+    : 1;
 
-/* 🔒 SAFETY: clamp page */
-if ($totalPages > 0 && $page > $totalPages) {
+/* 🔒 SAFETY */
+if ($page > $totalPages) {
     $page = $totalPages;
 }
 
@@ -66,7 +64,8 @@ if ($searchEmail !== '') {
             t.id, 
             t.ticket_number, 
             t.sender_email, 
-            t.subject, 
+            t.subject,
+            t.category,
             t.status, 
             t.created_at,
             (
@@ -110,7 +109,6 @@ if ($searchEmail !== '') {
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
-
 $tickets = $stmt->fetchAll();
 
 /* ================= CATEGORY COUNTS ================= */
@@ -133,7 +131,6 @@ $closedCount      = (int) ($categoryCounts['closed_count'] ?? 0);
 
 /* ================= DASHBOARD STATS ================= */
 
-/* ----- First Ticket Issued ----- */
 $firstStmt = $pdo->query("
     SELECT ticket_number, created_at 
     FROM tickets 
@@ -142,7 +139,6 @@ $firstStmt = $pdo->query("
 ");
 $firstTicket = $firstStmt->fetch();
 
-/* ----- Last Ticket Issued ----- */
 $lastStmt = $pdo->query("
     SELECT ticket_number, created_at 
     FROM tickets 
@@ -151,14 +147,10 @@ $lastStmt = $pdo->query("
 ");
 $lastTicket = $lastStmt->fetch();
 
-/* ----- Monthly Average Tickets ----- */
-$currentMonth = date('m');
-$currentYear  = date('Y');
-
+/* ===== Monthly Average ===== */
 $monthStart = date('Y-m-01');
 $monthEnd   = date('Y-m-t');
 
-/* Total tickets this month */
 $monthStmt = $pdo->prepare("
     SELECT COUNT(*) 
     FROM tickets 
@@ -167,14 +159,10 @@ $monthStmt = $pdo->prepare("
 $monthStmt->execute([$monthStart, $monthEnd]);
 $monthTotal = (int)$monthStmt->fetchColumn();
 
-/* Days passed in current month */
-$daysPassed = (int)date('j'); // today number in month
-
-$avgPerDay = $daysPassed > 0 
+$daysPassed = (int)date('j');
+$avgPerDay = ($daysPassed > 0)
     ? (int) ceil($monthTotal / $daysPassed)
     : 0;
-
-$monthLabel = date('F Y');
 
 /* ================= CLOSED TICKETS (MODAL) ================= */
 
@@ -182,28 +170,52 @@ $closedLimit = 10;
 $closedPage  = isset($_GET['closed_page']) && is_numeric($_GET['closed_page'])
     ? (int)$_GET['closed_page']
     : 1;
+
 $closedPage = max(1, $closedPage);
 $closedOffset = ($closedPage - 1) * $closedLimit;
 
-/* Count closed tickets */
-$closedCountStmt = $pdo->query("
+/* ===== Count Closed ===== */
+
+$whereClosed = "status = 'Closed'";
+$paramsClosed = [];
+
+if (!empty($_GET['closed_category'])) {
+    $whereClosed .= " AND category = :closed_category";
+    $paramsClosed[':closed_category'] = $_GET['closed_category'];
+}
+
+$closedCountStmt = $pdo->prepare("
     SELECT COUNT(*) 
     FROM tickets 
-    WHERE status = 'Closed'
+    WHERE $whereClosed
 ");
+
+foreach ($paramsClosed as $key => $value) {
+    $closedCountStmt->bindValue($key, $value);
+}
+
+$closedCountStmt->execute();
 $totalClosed = (int) $closedCountStmt->fetchColumn();
+
 $closedPages = (int) ceil($totalClosed / $closedLimit);
 
-/* Fetch closed tickets */
+/* ===== Fetch Closed ===== */
+
 $closedStmt = $pdo->prepare("
-    SELECT id, ticket_number, sender_email, subject, created_at
+    SELECT id, ticket_number, sender_email, subject, category,status_updated_at
     FROM tickets
-    WHERE status = 'Closed'
-    ORDER BY created_at DESC
+    WHERE $whereClosed
+    ORDER BY status_updated_at DESC
     LIMIT :limit OFFSET :offset
 ");
+
+foreach ($paramsClosed as $key => $value) {
+    $closedStmt->bindValue($key, $value);
+}
+
 $closedStmt->bindValue(':limit', $closedLimit, PDO::PARAM_INT);
 $closedStmt->bindValue(':offset', $closedOffset, PDO::PARAM_INT);
+
 $closedStmt->execute();
 $closedTickets = $closedStmt->fetchAll();
 
@@ -211,12 +223,9 @@ $closedTickets = $closedStmt->fetchAll();
 
 $totalTicketsAll = $openCount + $inProgressCount + $waitingCount + $closedCount;
 
-$completionRate = 0;
-
-if ($totalTicketsAll > 0) {
-    $completionRate = round(($closedCount / $totalTicketsAll) * 100);
-}
-
+$completionRate = ($totalTicketsAll > 0)
+    ? round(($closedCount / $totalTicketsAll) * 100)
+    : 0;
 ?>
 
 <!DOCTYPE html>
@@ -225,6 +234,31 @@ if ($totalTicketsAll > 0) {
 <meta charset="UTF-8">
 <title>IT Support Dashboard</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+/* Closed Tickets Modal Compact Mode */
+#closedTicketsModal table {
+    font-size: 0.72rem;
+}
+
+#closedTicketsModal th,
+#closedTicketsModal td {
+    padding: 4px 6px;
+    vertical-align: middle;
+}
+
+#closedTicketsModal thead th {
+    font-size: 0.75rem;
+}
+
+#closedTicketsModal .pagination .page-link,
+#closedTicketsModal button {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+}
+</style>
+
+
 </head>
 
 <body class="bg-light">
@@ -309,7 +343,6 @@ if ($totalTicketsAll > 0) {
     </div>
 </div>
 
-<?php if ($totalClosed > 0): ?>
 <div class="alert alert-info d-flex justify-content-between align-items-center">
     <span>ℹ️ There are <strong><?php echo $totalClosed; ?></strong> closed tickets archived.</span>
     <button
@@ -320,7 +353,6 @@ if ($totalTicketsAll > 0) {
         📁 View Closed Tickets
     </button>
 </div>
-<?php endif; ?>
 
 <!-- OPEN TICKETS TABLE (UNCHANGED) -->
 <div class="card shadow-sm">
@@ -394,29 +426,29 @@ if ($hasUpdate) {
 </table>
 </div>
 
-<?php if ($totalPages >= 1): ?>
+<?php if ($totalPages > 1): ?>
 <nav class="mt-4">
     <ul class="pagination justify-content-center">
 
-        <!-- Previous -->
         <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($searchEmail); ?>">
+            <a class="page-link"
+               href="?page=<?php echo max(1, $page - 1); ?>&search=<?php echo urlencode($searchEmail); ?>">
                 Previous
             </a>
         </li>
 
-        <!-- Page Numbers -->
         <?php for ($i = 1; $i <= $totalPages; $i++): ?>
             <li class="page-item <?php echo ($i === $page) ? 'active' : ''; ?>">
-                <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($searchEmail); ?>">
+                <a class="page-link"
+                   href="?page=<?php echo $i; ?>&search=<?php echo urlencode($searchEmail); ?>">
                     <?php echo $i; ?>
                 </a>
             </li>
         <?php endfor; ?>
 
-        <!-- Next -->
         <li class="page-item <?php echo ($page >= $totalPages) ? 'disabled' : ''; ?>">
-            <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($searchEmail); ?>">
+            <a class="page-link"
+               href="?page=<?php echo min($totalPages, $page + 1); ?>&search=<?php echo urlencode($searchEmail); ?>">
                 Next
             </a>
         </li>
@@ -424,6 +456,7 @@ if ($hasUpdate) {
     </ul>
 </nav>
 <?php endif; ?>
+
 
 <br>
 <a href="backup.php?backup=1" class="btn btn-sm btn-outline-primary"> 📥 Backup Database </a>
@@ -441,6 +474,26 @@ if ($hasUpdate) {
 
 <div class="modal-body" id="closedTicketsContainer">
 
+<form method="GET" class="mb-3 d-flex gap-2">
+
+    <input type="hidden" name="closed_page" value="1">
+
+    <select name="closed_category" class="form-select">
+        <option value="">All Categories</option>
+        <option value="Email">Email</option>
+        <option value="Hardware">Hardware</option>
+        <option value="Software">Software</option>
+        <option value="Network">Network</option>
+        <option value="ERP / ODOO">ERP / ODOO</option>
+        <option value="security">Security</option>
+        <option value="other">Other</option>
+    </select>
+
+    <button class="btn btn-primary btn-sm">Search</button>
+
+</form>
+
+
 <!-- INITIAL CONTENT (PAGE 1) -->
 <table class="table table-hover">
 <thead class="table-light">
@@ -448,7 +501,8 @@ if ($hasUpdate) {
 <th>Ticket #</th>
 <th>From</th>
 <th>Subject</th>
-<th>Created</th>
+<th>Category</th>
+<th>Closed Date</th>
 </tr>
 </thead>
 <tbody>
@@ -457,7 +511,8 @@ if ($hasUpdate) {
 <td><a href="ticket.php?id=<?php echo $ct['id']; ?>"><?php echo htmlspecialchars($ct['ticket_number']); ?></a></td>
 <td><?php echo htmlspecialchars($ct['sender_email']); ?></td>
 <td><?php echo htmlspecialchars($ct['subject']); ?></td>
-<td><?php echo date('M j, Y g:i A', strtotime($ct['created_at'])); ?></td>
+<td><?php echo htmlspecialchars($ct['category'] ?? '-'); ?></td>
+<td><?php echo date('M j, Y g:i A', strtotime($ct['status_updated_at'])); ?></td>
 </tr>
 <?php endforeach; ?>
 </tbody>
@@ -466,10 +521,11 @@ if ($hasUpdate) {
 <?php if ($closedPages > 1): ?>
 <nav class="text-center">
 <?php for ($i = 1; $i <= $closedPages; $i++): ?>
-<button class="btn btn-sm btn-outline-primary mx-1"
-onclick="loadClosedTickets(<?php echo $i; ?>)">
-<?php echo $i; ?>
-</button>
+<a href="?closed_page=<?php echo $i; ?>&search=<?php echo urlencode($searchEmail); ?>"
+   class="btn btn-sm btn-outline-primary mx-1
+   <?php echo ($i == $closedPage) ? 'active' : ''; ?>">
+    <?php echo $i; ?>
+</a>
 <?php endfor; ?>
 </nav>
 <?php endif; ?>
@@ -489,15 +545,6 @@ onclick="loadClosedTickets(<?php echo $i; ?>)">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- ✅ AJAX FIX (ADDITION ONLY) -->
-<script>
-function loadClosedTickets(page) {
-    fetch('ajax_closed_tickets.php?page=' + page)
-        .then(res => res.text())
-        .then(html => {
-            document.getElementById('closedTicketsContainer').innerHTML = html;
-        });
-}
-</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -510,6 +557,18 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => alert.remove(), 500);
     }, 3000);
 });
+</script>
+
+<script>
+function loadClosedTickets(page) {
+    const category = document.querySelector('[name="closed_category"]').value;
+
+    fetch('ajax_closed_tickets.php?page=' + page + '&closed_category=' + category)
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById('closedTicketsContainer').innerHTML = html;
+        });
+}
 </script>
 
 <script>
@@ -534,6 +593,14 @@ setInterval(() => {
 }, 30000);
 </script>
 
+<?php if (isset($_GET['closed_page'])): ?>
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+    var modal = new bootstrap.Modal(document.getElementById('closedTicketsModal'));
+    modal.show();
+});
+</script>
+<?php endif; ?>
 
 </body>
 </html>
