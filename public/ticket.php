@@ -139,6 +139,19 @@ if (!empty($_FILES['attachments']['name'][0])) {
         WHERE id = ?
     ")->execute([$newStatus, $ticketId]);
 
+    // Update category if selected
+    if (!empty($_POST['category'])) {
+        $pdo->prepare("
+            UPDATE tickets 
+            SET category = ?
+            WHERE id = ?
+        ")->execute([
+            $_POST['category'],
+            $ticket['id']
+        ]);
+    }
+
+
     /* ---- Send emails ---- */
     if ($sendEmail) {
 
@@ -213,16 +226,6 @@ if (!empty($_FILES['attachments']['name'][0])) {
 );
 
         }
-
-        // Notify staff/admin
-        
-        /*
-        sendMail(
-            $_SESSION['admin_username'] . '@loopsautomation.com',
-            "Admin update on {$ticket['ticket_number']}",
-            "An update was added:\n\n$message"
-        );
-        */
         
     }
 
@@ -263,6 +266,7 @@ if (!empty($_FILES['attachments']['name'][0])) {
         <div class="card-body">
             <p><strong>From:</strong> <?php echo htmlspecialchars($ticket['sender_email']); ?></p>
             <p><strong>Subject:</strong> <?php echo htmlspecialchars($ticket['subject']); ?></p>
+            <p><strong>Category:</strong> <?php echo htmlspecialchars($ticket['category'] ?? 'Unassigned'); ?></p>
             <p><strong>Status:</strong> <?php echo htmlspecialchars($ticket['status']); ?></p>
             <p class="mb-0"><strong>Created:</strong> <?php echo $ticket['created_at']; ?></p>
         </div>
@@ -333,6 +337,48 @@ echo nl2br(htmlspecialchars(cleanDisplay($ticket['message'])));
             <h6>Add Update</h6>
 
             <form method="post" enctype="multipart/form-data">
+                       <div class="mb-3">
+                    <label class="form-label">Category</label>
+                   <select name="category" class="form-select">
+
+                    <option value="">-- Select Category --</option>
+
+                    <option value="Email"
+                        <?php if (($ticket['category'] ?? '') === 'Email') echo 'selected'; ?>>
+                        Email
+                    </option>
+
+                    <option value="Hardware"
+                        <?php if (($ticket['category'] ?? '') === 'Hardware') echo 'selected'; ?>>
+                        Hardware
+                    </option>
+
+                    <option value="Software"
+                        <?php if (($ticket['category'] ?? '') === 'Software') echo 'selected'; ?>>
+                        Software
+                    </option>
+
+                    <option value="Network"
+                        <?php if (($ticket['category'] ?? '') === 'Network') echo 'selected'; ?>>
+                        Network
+                    </option>
+
+                    <option value="ERP / Odoo"
+                    <?php if (($ticket['category'] ?? '') === 'ERP / Odoo') echo 'selected'; ?>>
+                        ERP / Odoo
+                    </option>
+                    
+                    <option value="Security"
+                    <?php if (($ticket['category'] ?? '') === 'Security') echo 'selected'; ?>>
+                        Security
+                    </option>
+
+                    <option value="Other"
+                    <?php if (($ticket['category'] ?? '') === 'Other') echo 'selected'; ?>>
+                        Other
+                    </option>
+                </select>
+                </div>
                 <label class="form-label">Status</label>
                 <select name="status" class="form-select mb-3">
                     <?php foreach (['Open','In Progress','Waiting','Closed'] as $s): ?>

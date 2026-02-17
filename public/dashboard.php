@@ -90,7 +90,8 @@ if ($searchEmail !== '') {
             t.id, 
             t.ticket_number, 
             t.sender_email, 
-            t.subject, 
+            t.subject,
+            t.category, 
             t.status, 
             t.created_at,
             (
@@ -330,6 +331,7 @@ if ($totalTicketsAll > 0) {
 <th>Ticket #</th>
 <th>From</th>
 <th>Subject</th>
+<th>Category</th>
 <th>Status</th>
 <th>Created</th>
 </tr>
@@ -342,6 +344,7 @@ if ($totalTicketsAll > 0) {
 <td><a href="ticket.php?id=<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['ticket_number']); ?></a></td>
 <td><?php echo htmlspecialchars($t['sender_email']); ?></td>
 <td><?php echo htmlspecialchars($t['subject']); ?></td>
+<td><?php echo htmlspecialchars($t['category'] ?? '-'); ?></td>
 <td>
 
 <?php
