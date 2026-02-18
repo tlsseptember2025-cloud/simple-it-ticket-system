@@ -2,6 +2,24 @@
 require 'auth.php';
 require '../config/db.php';
 
+
+/* ================= CATEGORY REPORT (ALL DATES) ================= */
+
+$categoryAllStmt = $pdo->query("
+    SELECT 
+        category,
+        COUNT(*) AS total,
+        SUM(status = 'Open') AS open_count,
+        SUM(status = 'In Progress') AS in_progress_count,
+        SUM(status = 'Waiting') AS waiting_count,
+        SUM(status = 'Closed') AS closed_count
+    FROM tickets
+    GROUP BY category
+    ORDER BY total DESC
+");
+
+$categoryAllReport = $categoryAllStmt->fetchAll(PDO::FETCH_ASSOC);
+
 /* ===== Ticket Summary ===== */
 
 $stmt = $pdo->query("
@@ -16,26 +34,74 @@ $stmt = $pdo->query("
 
 $summary = $stmt->fetch(PDO::FETCH_ASSOC);
 
-/* ===== Date Range Report ===== */
+/* ===== Date Range Report (DETAILED TICKETS) ===== */
 
-$dateStats = [];
+$rangeTickets = [];
+$rangeReport = [];
 
-if (!empty($_GET['from']) && !empty($_GET['to'])) {
+if (!empty($_GET['from_date']) && !empty($_GET['to_date'])) {
+
+    $where = "DATE(created_at) BETWEEN :from AND :to";
+    $params = [
+        ':from' => $_GET['from_date'],
+        ':to'   => $_GET['to_date']
+    ];
+
+    if (!empty($_GET['category_filter'])) {
+        $where .= " AND category = :category";
+        $params[':category'] = $_GET['category_filter'];
+    }
 
     $stmt = $pdo->prepare("
-        SELECT status, COUNT(*) AS total
+        SELECT id, ticket_number, sender_email, subject, status, category, created_at
         FROM tickets
-        WHERE created_at BETWEEN ? AND ?
-        GROUP BY status
+        WHERE $where
+        ORDER BY category ASC, created_at DESC
     ");
 
-    $stmt->execute([
-        $_GET['from'] . ' 00:00:00',
-        $_GET['to'] . ' 23:59:59'
-    ]);
+    $stmt->execute($params);
 
-    $dateStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $rangeTickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+/* ================= GENERATE CATEGORY PDF ================= */
+
+/* ================= CATEGORY REPORT (DETAIL MODE) ================= */
+
+$rangeReport = [];
+
+if (!empty($_GET['from_date']) && !empty($_GET['to_date'])) {
+
+    $from = $_GET['from_date'];
+    $to   = $_GET['to_date'];
+    $categoryFilter = $_GET['category_filter'] ?? '';
+
+    $sql = "
+        SELECT ticket_number, sender_email, subject, category, status, created_at
+        FROM tickets
+        WHERE DATE(created_at) BETWEEN :from AND :to
+    ";
+
+    if (!empty($categoryFilter)) {
+        $sql .= " AND category = :category ";
+    }
+
+    $sql .= " ORDER BY created_at DESC";
+
+    $rangeStmt = $pdo->prepare($sql);
+
+    $rangeStmt->bindValue(':from', $from);
+    $rangeStmt->bindValue(':to', $to);
+
+    if (!empty($categoryFilter)) {
+        $rangeStmt->bindValue(':category', $categoryFilter);
+    }
+
+    $rangeStmt->execute();
+
+    $rangeReport = $rangeStmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 
 /* ===== STEP C: Tickets by Staff ===== */
 
@@ -49,8 +115,6 @@ $stmt = $pdo->query("
 $staffStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* ===== STEP D: Resolution Time ===== */
-
-/* ===== STEP D: Resolution Time (Minutes Precision) ===== */
 
 $stmt = $pdo->query("
     SELECT
@@ -72,6 +136,25 @@ if ($avgMinutes > 0) {
     } else {
         $avgResolutionText = "{$minutes}m";
     }
+}
+
+if (
+    isset($_GET['generate_category_pdf']) &&
+    !empty($_GET['from_date']) &&
+    !empty($_GET['to_date'])
+) {
+
+    require __DIR__ . '/generate_category_pdf.php';
+
+    $fileName = generateCategoryPDF(
+        $_GET['from_date'],
+        $_GET['to_date'],
+        $_GET['category_filter'] ?? '',
+        $pdo
+    );
+
+    header("Location: reports.php?generated_category_pdf=" . urlencode($fileName));
+    exit;
 }
 
 ?>
@@ -160,64 +243,6 @@ if ($avgMinutes > 0) {
 
 <hr class="my-4">
 
-<h5 class="mb-3">📅 Tickets by Date Range</h5>
-
-<form method="get" class="row g-2 mb-4">
-
-    <div class="col-md-3">
-        <label class="form-label">From</label>
-        <input
-            type="date"
-            name="from"
-            class="form-control"
-            value="<?php echo $_GET['from'] ?? ''; ?>"
-            required
-        >
-    </div>
-
-    <div class="col-md-3">
-        <label class="form-label">To</label>
-        <input
-            type="date"
-            name="to"
-            class="form-control"
-            value="<?php echo $_GET['to'] ?? ''; ?>"
-            required
-        >
-    </div>
-
-    <div class="col-md-2 align-self-end">
-        <button class="btn btn-primary">
-            Generate
-        </button>
-    </div>
-
-</form>
-
-<?php if (!empty($dateStats)): ?>
-
-<div class="card shadow-sm col-md-4">
-    <div class="card-body">
-        <h6 class="card-title">Results</h6>
-
-        <ul class="list-group list-group-flush">
-            <?php foreach ($dateStats as $row): ?>
-                <li class="list-group-item d-flex justify-content-between">
-                    <?php echo htmlspecialchars($row['status']); ?>
-                    <span class="badge bg-secondary">
-                        <?php echo $row['total']; ?>
-                    </span>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-
-    </div>
-</div>
-
-<?php endif; ?>
-
-<hr class="my-4">
-
 <h5 class="mb-3">👤 Tickets by Staff</h5>
 
 <table class="table table-bordered table-sm col-md-6">
@@ -249,17 +274,151 @@ if ($avgMinutes > 0) {
     </tbody>
 </table>
 
-<hr class="my-4">
-
-<h5 class="mb-3">⏱ Average Resolution Time</h5>
-
-<div class="alert alert-info col-md-4">
-    <strong><?php echo $avgResolutionText; ?></strong>
-    <br>
-    <small class="text-muted">
-        Average time to close a ticket
-    </small>
+<?php if (!empty($_GET['category_email_sent'])): ?>
+<div class="alert alert-success">
+    📧 Category report emailed successfully.
 </div>
+<?php endif; ?>
+
+
+<hr class="my-4">
+<h5 class="mt-4">📅 Category Report (Specific Date Range)</h5>
+
+<form method="GET" class="row g-2 mb-3">
+
+    <div class="col-md-3">
+        <input type="date" name="from_date" class="form-control"
+               value="<?= $_GET['from_date'] ?? '' ?>" required>
+    </div>
+
+    <div class="col-md-3">
+        <input type="date" name="to_date" class="form-control"
+               value="<?= $_GET['to_date'] ?? '' ?>" required>
+    </div>
+
+    <div class="col-md-3">
+        <select name="category_filter" class="form-select">
+            <option value="">All Categories</option>
+            <option value="Email">Email</option>
+            <option value="Hardware">Hardware</option>
+            <option value="Software">Software</option>
+            <option value="Network">Network</option>
+            <option value="ERP / Odoo">ERP / Odoo</option>
+            <option value="Security">Security</option>
+            <option value="other">Other</option>
+
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <button class="btn btn-primary btn-sm">Generate</button>
+    </div>
+
+</form>
+
+
+  <?php if (!empty($_GET['generated_category_pdf'])): ?>
+<div class="alert alert-success d-flex justify-content-between align-items-center">
+    <span>📄 Category report generated.</span>
+    <div>
+        <a href="../uploads/reports/<?php echo htmlspecialchars($_GET['generated_category_pdf']); ?>" 
+           target="_blank"
+           class="btn btn-sm btn-primary">
+           Download
+        </a>
+
+        <a href="send_category_report.php?file=<?php echo urlencode($_GET['generated_category_pdf']); ?>" 
+           class="btn btn-sm btn-danger">
+           Send by Email
+        </a>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($rangeTickets)): ?>
+
+<hr class="my-4">
+<h5 class="mt-4">📊 Tickets by Category (Detailed Range)</h5>
+
+<div class="card shadow-sm">
+<div class="card-body">
+
+<?php
+$currentCategory = null;
+
+foreach ($rangeTickets as $ticket):
+
+    if ($ticket['category'] !== $currentCategory):
+
+        if ($currentCategory !== null) {
+            echo "</tbody></table><br>";
+        }
+
+        $currentCategory = $ticket['category'] ?? 'Uncategorized';
+
+        echo "<h6 class='mt-3'>📁 Category: " . htmlspecialchars($currentCategory) . "</h6>";
+        echo "<table class='table table-sm table-bordered'>";
+        echo "<thead class='table-light'>
+                <tr>
+                    <th>Ticket #</th>
+                    <th>From</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                </tr>
+              </thead><tbody>";
+    endif;
+?>
+
+<tr>
+<td>
+    <a href="ticket.php?id=<?php echo $ticket['id']; ?>">
+        <?php echo htmlspecialchars($ticket['ticket_number']); ?>
+    </a>
+</td>
+<td><?php echo htmlspecialchars($ticket['sender_email']); ?></td>
+<td><?php echo htmlspecialchars($ticket['subject']); ?></td>
+<td><?php echo htmlspecialchars($ticket['status']); ?></td>
+<td><?php echo date('M j, Y g:i A', strtotime($ticket['created_at'])); ?></td>
+</tr>
+
+<?php endforeach; ?>
+
+</tbody>
+</table>
+
+<?php if (!empty($rangeReport)): ?>
+
+<div class="alert alert-success d-flex justify-content-between align-items-center">
+    📄 Category report generated
+
+    <div>
+        <a href="?from_date=<?= $_GET['from_date'] ?>
+            &to_date=<?= $_GET['to_date'] ?>
+            &category_filter=<?= $_GET['category_filter'] ?? '' ?>
+            &generate_category_pdf=1"
+           class="btn btn-primary btn-sm">
+            Download
+        </a>
+
+        <a href="?from_date=<?= $_GET['from_date'] ?>
+            &to_date=<?= $_GET['to_date'] ?>
+            &category_filter=<?= $_GET['category_filter'] ?? '' ?>
+            &generate_category_pdf=1
+            &send_email=1"
+           class="btn btn-danger btn-sm">
+            Send by Email
+        </a>
+    </div>
+</div>
+
+<?php endif; ?>
+
+
+</div>
+</div>
+
+<?php endif; ?>
 
 <hr class="my-4">
 
@@ -315,5 +474,6 @@ if ($avgMinutes > 0) {
 </a>
 
 </div>
+
 </body>
 </html>
