@@ -5,8 +5,17 @@ if (!isset($_GET['backup'])) {
     exit;
 }
 
-$mysqldumpPath = 'D:\\xampp\\mysql\\bin\\mysqldump.exe';
-$backupDir     = 'D:\\xampp\\htdocs\\simple-it-ticket-system\\database\\';
+// Detect XAMPP root dynamically
+$xamppRoot = dirname(dirname(dirname(__DIR__)));
+
+// mysqldump path (inside XAMPP)
+$mysqldumpPath = $xamppRoot . '/mysql/bin/mysqldump.exe';
+
+// Backup directory (inside your project)
+$backupDir = __DIR__ . '/../database/';
+
+//$mysqldumpPath = 'C:\\xampp\\mysql\\bin\\mysqldump.exe';
+//$backupDir     = 'C:\\xampp\\htdocs\\simple-it-ticket-system\\database\\';
 
 if (!is_dir($backupDir)) {
     mkdir($backupDir, 0777, true);
