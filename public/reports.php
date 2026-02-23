@@ -320,11 +320,14 @@ if (
   <?php if (!empty($_GET['generated_category_pdf'])): ?>
 <div class="alert alert-success d-flex justify-content-between align-items-center">
     <span>📄 Category report generated.</span>
-    <div>
-        <a href="../uploads/reports/<?php echo htmlspecialchars($_GET['generated_category_pdf']); ?>" 
-           target="_blank"
-           class="btn btn-sm btn-primary">
-           Download
+        <div>
+        <a href="generate_category_pdf.php?
+        from_date=<?= $_GET['from_date'] ?? "" ?>
+        &to_date=<?= $_GET['to_date'] ?? '' ?>
+        &category_filter=<?= $_GET['category_filter'] ?? '' ?>"
+        target="_blank"
+        class="btn btn-primary btn-sm">
+            Download
         </a>
 
         <a href="send_category_report.php?file=<?php echo urlencode($_GET['generated_category_pdf']); ?>" 
