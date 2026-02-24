@@ -70,6 +70,5 @@ function generateCategoryPDF($from, $to, $category, $pdo)
     }
 
     $pdf->Output('F', $filePath);
-
     return $fileName;
 }

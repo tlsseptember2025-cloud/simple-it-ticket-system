@@ -153,8 +153,16 @@ if (
         $pdo
     );
 
-    header("Location: reports.php?generated_category_pdf=" . urlencode($fileName));
-    exit;
+    $query = http_build_query([
+    'from_date' => $_GET['from_date'],
+    'to_date' => $_GET['to_date'],
+    'category_filter' => $_GET['category_filter'] ?? '',
+    'generated_category_pdf' => $fileName
+]);
+
+header("Location: reports.php?$query");
+exit;
+
 }
 
 ?>
@@ -317,22 +325,28 @@ if (
 </form>
 
 
-  <?php if (!empty($_GET['generated_category_pdf'])): ?>
+<?php if (!empty($_GET['generated_category_pdf'])): ?>
 <div class="alert alert-success d-flex justify-content-between align-items-center">
     <span>📄 Category report generated.</span>
-        <div>
-        <a href="generate_category_pdf.php?
-        from_date=<?= $_GET['from_date'] ?? "" ?>
-        &to_date=<?= $_GET['to_date'] ?? '' ?>
-        &category_filter=<?= $_GET['category_filter'] ?? '' ?>"
-        target="_blank"
-        class="btn btn-primary btn-sm">
-            Download
+    <div>
+        <a
+          href="../uploads/reports/<?= urlencode($_GET['generated_category_pdf']) ?>"
+          class="btn btn-primary btn-sm"
+          download
+        >
+          Download
         </a>
 
-        <a href="send_category_report.php?file=<?php echo urlencode($_GET['generated_category_pdf']); ?>" 
-           class="btn btn-sm btn-danger">
-           Send by Email
+        <a
+          href="send_category_report.php?<?= http_build_query([
+              'file' => $_GET['generated_category_pdf'],
+              'from_date' => $_GET['from_date'] ?? '',
+              'to_date' => $_GET['to_date'] ?? '',
+              'category_filter' => $_GET['category_filter'] ?? ''
+          ]) ?>"
+          class="btn btn-sm btn-danger"
+        >
+          Send by Email
         </a>
     </div>
 </div>

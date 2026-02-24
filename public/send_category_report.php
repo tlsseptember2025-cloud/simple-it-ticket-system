@@ -19,5 +19,13 @@ sendMail(
     $filePath
 );
 
-header("Location: reports.php?category_email_sent=1");
+$query = http_build_query([
+    'from_date' => $_GET['from_date'] ?? '',
+    'to_date' => $_GET['to_date'] ?? '',
+    'category_filter' => $_GET['category_filter'] ?? '',
+    'generated_category_pdf' => $fileName,
+    'category_email_sent' => 1
+]);
+
+header("Location: reports.php?$query");
 exit;
