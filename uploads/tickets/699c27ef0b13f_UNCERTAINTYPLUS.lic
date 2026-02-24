@@ -1,0 +1,43 @@
+﻿ISV kelton
+LICENSE kelton administration 2.3.1 05-mar-2026 single
+  hostid=d843aee3c29a start=19-jan-2026 platforms="x86_w x64_w" 
+  customer="Loops Automation (L.L.C) - Chetan Tannu" contract=T8073
+  issued=19-jan-2026 disable="TerminalServer VM" _ck=2e6721e602 sig="
+  60PG450YKTH3N1N6B8FQF7ME7BYD89TVF2PGFE022M0ATVT3J6RM43N88DVMA8S6ME0
+  B4RSBAHPG"
+LICENSE kelton fm2p 2.3.1 05-mar-2026 single hostid=d843aee3c29a
+  start=19-jan-2026 platforms="x86_w x64_w" customer="Loops
+   Automation (L.L.C) - Chetan Tannu" contract=T8073
+  issued=19-jan-2026 disable="TerminalServer VM" _ck=bd6721a128 sig="
+  60P0451K84H4RT8TDYD00A0H4UQ3QX63U1RXH4822H0YSARAMP1JGBDAX0XB17U3BBB
+  G4F0TNR"
+LICENSE kelton k900 2.3.1 05-mar-2026 single hostid=d843aee3c29a
+  start=19-jan-2026 platforms="x86_w x64_w" customer="Loops
+   Automation (L.L.C) - Chetan Tannu" contract=T8073
+  issued=19-jan-2026 disable="TerminalServer VM" _ck=4c6721b801 sig="
+  60PG450J3CNKUV509XMMDJCFUSC9DAKK7NUNV0822M0BWK75TS80ENSJYBHUGEYR5DJ
+  99C0Y3MKG"
+LICENSE kelton standard_modules 2.3.1 05-mar-2026 single
+  hostid=d843aee3c29a start=19-jan-2026 platforms="x86_w x64_w" 
+  customer="Loops Automation (L.L.C) - Chetan Tannu" contract=T8073
+  issued=19-jan-2026 disable="TerminalServer VM" _ck=f16721ed30 sig="
+  60Q04580S7J2H48UC176C8A8JMDUH4QDAP41TPV108AG1H6TNX6PF93C5HXYH6VQJ8Q
+  MNS4GJPEWV"
+LICENSE kelton un-403 2.3.1 05-mar-2026 single hostid=d843aee3c29a
+  start=19-jan-2026 platforms="x86_w x64_w" customer="Loops
+   Automation (L.L.C) - Chetan Tannu" contract=T8073
+  issued=19-jan-2026 disable="TerminalServer VM" _ck=ef6721970b sig="
+  60P0452R8W3VPWTP8RDPTDG4W29HH2RPXGCNK4022HM9UWJ7UJH455YHPPSNXPUXJ2B
+  G6J1208"
+LICENSE kelton uncertainty 2.3.1 05-mar-2026 single
+  hostid=d843aee3c29a start=19-jan-2026 platforms="x86_w x64_w" 
+  customer="Loops Automation (L.L.C) - Chetan Tannu" contract=T8073
+  issued=19-jan-2026 disable="TerminalServer VM" _ck=fe6721f839 sig="
+  60PG4580MBHR3JBK4W80KR0YY27TU1057MEYKRKE08A79CTPB5MU50PHQE2H07HMEM7
+  10S5Q85UG"
+LICENSE kelton uncertaintyplus.net 2.3.1 05-mar-2026 single
+  hostid=d843aee3c29a start=19-jan-2026 platforms="x86_w x64_w" 
+  customer="Loops Automation (L.L.C) - Chetan Tannu" contract=T8073
+  issued=19-jan-2026 disable="TerminalServer VM" _ck=376721eb01 sig="
+  60Q04580N4KMB86Y35YT0KV2C1ASN3MBPKYCADUF08AG110PHQJMRHJMK23H1UBRREX
+  2PH0YRXTPT"

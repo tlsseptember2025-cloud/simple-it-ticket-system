@@ -3,8 +3,8 @@
 $host = 'localhost';   // ← safer than 127.0.0.1 in XAMPP
 $db   = 'it_ticket_system';
 $user = 'root';
-$pass = '';   // ← exactly what you tested
-$port = 3306;                   // ← match my.ini
+$pass = 'Fatima2020';   // ← exactly what you tested
+$port = 3307;                   // ← match my.ini
 
 try {
     $pdo = new PDO(
