@@ -103,12 +103,21 @@ if (!empty($_GET['from_date']) && !empty($_GET['to_date'])) {
 }
 
 
-/* ===== STEP C: Tickets by Staff ===== */
+/* ===== STEP C: Tickets by Staff =====
 
 $stmt = $pdo->query("
     SELECT sender_email, COUNT(*) AS total
     FROM tickets
     GROUP BY sender_email
+    ORDER BY total DESC
+");
+
+*/
+
+$stmt = $pdo->query("
+    SELECT sender_email, category, COUNT(*) AS total
+    FROM tickets
+    GROUP BY category
     ORDER BY total DESC
 ");
 
@@ -251,12 +260,12 @@ exit;
 
 <hr class="my-4">
 
-<h5 class="mb-3">👤 Tickets by Staff</h5>
+<h5 class="mb-3">👤 Tickets by Category</h5>
 
 <table class="table table-bordered table-sm col-md-6">
     <thead class="table-light">
         <tr>
-            <th>Staff Email</th>
+            <th class="text-center">Category</th>
             <th class="text-center">Total Tickets</th>
         </tr>
     </thead>
@@ -271,10 +280,8 @@ exit;
         <?php else: ?>
             <?php foreach ($staffStats as $row): ?>
                 <tr>
-                    <td><?php echo htmlspecialchars($row['sender_email']); ?></td>
-                    <td class="text-center fw-semibold">
-                        <?php echo $row['total']; ?>
-                    </td>
+                    <td class="text-center fw-semibold"><?php echo $row['category']; ?></td>
+                    <td class="text-center fw-semibold"><?php echo $row['total']; ?></td>
                 </tr>
             <?php endforeach; ?>
         <?php endif; ?>
@@ -282,164 +289,6 @@ exit;
     </tbody>
 </table>
 
-<?php if (!empty($_GET['category_email_sent'])): ?>
-<div class="alert alert-success">
-    📧 Category report emailed successfully.
-</div>
-<?php endif; ?>
-
-<<<<<<< HEAD
-=======
-
-<hr class="my-4">
-<h5 class="mt-4">📅 Category Report (Specific Date Range)</h5>
-
-<form method="GET" class="row g-2 mb-3">
-
-    <div class="col-md-3">
-        <input type="date" name="from_date" class="form-control"
-               value="<?= $_GET['from_date'] ?? '' ?>" required>
-    </div>
-
-    <div class="col-md-3">
-        <input type="date" name="to_date" class="form-control"
-               value="<?= $_GET['to_date'] ?? '' ?>" required>
-    </div>
-
-    <div class="col-md-3">
-        <select name="category_filter" class="form-select">
-            <option value="">All Categories</option>
-            <option value="Email">Email</option>
-            <option value="Hardware">Hardware</option>
-            <option value="Software">Software</option>
-            <option value="Network">Network</option>
-            <option value="ERP / Odoo">ERP / Odoo</option>
-            <option value="Security">Security</option>
-            <option value="other">Other</option>
-
-        </select>
-    </div>
-
-    <div class="col-md-2">
-        <button class="btn btn-primary btn-sm">Generate</button>
-    </div>
-
-</form>
-
-
-<?php if (!empty($_GET['generated_category_pdf'])): ?>
-<div class="alert alert-success d-flex justify-content-between align-items-center">
-    <span>📄 Category report generated.</span>
-    <div>
-        <a
-          href="../uploads/reports/<?= urlencode($_GET['generated_category_pdf']) ?>"
-          class="btn btn-primary btn-sm"
-          download
-        >
-          Download
-        </a>
-
-        <a
-          href="send_category_report.php?<?= http_build_query([
-              'file' => $_GET['generated_category_pdf'],
-              'from_date' => $_GET['from_date'] ?? '',
-              'to_date' => $_GET['to_date'] ?? '',
-              'category_filter' => $_GET['category_filter'] ?? ''
-          ]) ?>"
-          class="btn btn-sm btn-danger"
-        >
-          Send by Email
-        </a>
-    </div>
-</div>
-<?php endif; ?>
-
-<?php if (!empty($rangeTickets)): ?>
-
-<hr class="my-4">
-<h5 class="mt-4">📊 Tickets by Category (Detailed Range)</h5>
-
-<div class="card shadow-sm">
-<div class="card-body">
-
-<?php
-$currentCategory = null;
-
-foreach ($rangeTickets as $ticket):
-
-    if ($ticket['category'] !== $currentCategory):
-
-        if ($currentCategory !== null) {
-            echo "</tbody></table><br>";
-        }
-
-        $currentCategory = $ticket['category'] ?? 'Uncategorized';
-
-        echo "<h6 class='mt-3'>📁 Category: " . htmlspecialchars($currentCategory) . "</h6>";
-        echo "<table class='table table-sm table-bordered'>";
-        echo "<thead class='table-light'>
-                <tr>
-                    <th>Ticket #</th>
-                    <th>From</th>
-                    <th>Subject</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                </tr>
-              </thead><tbody>";
-    endif;
-?>
-
-<tr>
-<td>
-    <a href="ticket.php?id=<?php echo $ticket['id']; ?>">
-        <?php echo htmlspecialchars($ticket['ticket_number']); ?>
-    </a>
-</td>
-<td><?php echo htmlspecialchars($ticket['sender_email']); ?></td>
-<td><?php echo htmlspecialchars($ticket['subject']); ?></td>
-<td><?php echo htmlspecialchars($ticket['status']); ?></td>
-<td><?php echo date('M j, Y g:i A', strtotime($ticket['created_at'])); ?></td>
-</tr>
-
-<?php endforeach; ?>
-
-</tbody>
-</table>
-
-<?php if (!empty($rangeReport)): ?>
-
-<div class="alert alert-success d-flex justify-content-between align-items-center">
-    📄 Category report generated
-
-    <div>
-        <a href="?from_date=<?= $_GET['from_date'] ?>
-            &to_date=<?= $_GET['to_date'] ?>
-            &category_filter=<?= $_GET['category_filter'] ?? '' ?>
-            &generate_category_pdf=1"
-           class="btn btn-primary btn-sm">
-            Download
-        </a>
-
-        <a href="?from_date=<?= $_GET['from_date'] ?>
-            &to_date=<?= $_GET['to_date'] ?>
-            &category_filter=<?= $_GET['category_filter'] ?? '' ?>
-            &generate_category_pdf=1
-            &send_email=1"
-           class="btn btn-danger btn-sm">
-            Send by Email
-        </a>
-    </div>
-</div>
-
-<?php endif; ?>
-
-
-</div>
-</div>
-
-<?php endif; ?>
-
->>>>>>> d281554d7bea7f533f95248af015b51566731f7a
 <hr class="my-4">
 
 <h5 class="mb-3">📅 Monthly Ticket Report</h5>
