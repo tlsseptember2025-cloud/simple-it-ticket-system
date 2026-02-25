@@ -40,10 +40,10 @@ $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC);
 /* ================= TICKETS ================= */
 
 $ticketsStmt = $pdo->prepare("
-    SELECT ticket_number, sender_email, subject, status, created_at
+    SELECT ticket_number, sender_email, category, status, created_at
     FROM tickets
     WHERE DATE(created_at) BETWEEN ? AND ?
-    ORDER BY created_at ASC
+    ORDER BY category, status 
 ");
 $ticketsStmt->execute([$startDate, $endDate]);
 $tickets = $ticketsStmt->fetchAll();
@@ -159,7 +159,7 @@ $pdf->Ln(6);
 $pdf->SetFont('Helvetica', 'B', 10);
 $pdf->SetWidths([45, 70, 95, 30, 37]);
 
-$pdf->Row(['Ticket #', 'From', 'Subject', 'Status', 'Created']);
+$pdf->Row(['Ticket #', 'From', 'Category', 'Status', 'Created']);
 
 /* Table Rows */
 $pdf->SetFont('Helvetica', '', 9);
@@ -168,7 +168,7 @@ foreach ($tickets as $t) {
     $pdf->Row([
         $t['ticket_number'],
         $t['sender_email'],
-        $t['subject'],
+        $t['category'],
         $t['status'],
         date('D, M j, Y', strtotime($t['created_at']))
     ]);

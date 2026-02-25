@@ -18,9 +18,9 @@ $summary = $pdo->query("
 /* ================= FETCH TICKETS ================= */
 
 $tickets = $pdo->query("
-    SELECT ticket_number, sender_email, subject, status, created_at
+    SELECT ticket_number, sender_email, subject, category, status, created_at
     FROM tickets
-    ORDER BY created_at DESC
+    ORDER BY category DESC
 ")->fetchAll();
 
 /* ================= CREATE PDF ================= */
@@ -79,15 +79,15 @@ $pdf->Ln(6);
 // Column widths (sum ≈ 277mm usable width in landscape)
 $wTicket  = 45;
 $wFrom    = 70;
-$wSubject = 95;
-$wStatus  = 30;
-$wCreated = 37;
+$wCat = 95;
+$wStatus  = 20;
+$wCreated = 45;
 
 /* ---- Header ---- */
 $pdf->SetFont('Helvetica', 'B', 10);
 $pdf->Cell($wTicket, 8, 'Ticket #', 1);
 $pdf->Cell($wFrom, 8, 'From', 1);
-$pdf->Cell($wSubject, 8, 'Subject', 1);
+$pdf->Cell($wCat, 8, 'Category', 1);
 $pdf->Cell($wStatus, 8, 'Status', 1);
 $pdf->Cell($wCreated, 8, 'Created', 1);
 $pdf->Ln();
@@ -99,7 +99,7 @@ foreach ($tickets as $t) {
 
     $pdf->Cell($wTicket, 8, $t['ticket_number'], 1);
     $pdf->Cell($wFrom, 8, substr($t['sender_email'], 0, 40), 1);
-    $pdf->Cell($wSubject, 8, substr($t['subject'], 0, 60), 1);
+    $pdf->Cell($wCat, 8, substr($t['category'], 0, 60), 1);
     $pdf->Cell($wStatus, 8, $t['status'], 1);
     $pdf->Cell(
         $wCreated,
