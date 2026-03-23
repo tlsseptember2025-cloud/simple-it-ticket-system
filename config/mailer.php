@@ -62,8 +62,7 @@ function sendMail($to, $subject, $body, $attachments = null)
         return true;
 
     } catch (Exception $e) {
-        // Uncomment ONLY if debugging:
-        // error_log('Mailer Error: ' . $mail->ErrorInfo);
-        return false;
-    }
+    echo 'Mailer Error: ' . $mail->ErrorInfo;
+    exit;
+}
 }
