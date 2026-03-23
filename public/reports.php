@@ -2,7 +2,6 @@
 require 'auth.php';
 require '../config/db.php';
 
-
 /* ================= CATEGORY REPORT (ALL DATES) ================= */
 
 $categoryAllStmt = $pdo->query("
@@ -188,6 +187,7 @@ exit;
 <body class="bg-light">
 
 <nav class="navbar bg-white shadow-sm rounded mb-4 px-3">
+
     <a class="navbar-brand d-flex align-items-center fw-semibold" href="dashboard.php">
         <img
             src="../public/assets/company-logo.png"
@@ -204,6 +204,13 @@ exit;
         </a>
     </div>
 </nav>
+
+<?php
+    if (!empty($_SESSION['fetch_success'])): ?> 
+        <div id="fetchAlert" class="alert alert-success alert-dismissible fade show"> 
+            <?php echo $_SESSION['fetch_success']; unset($_SESSION['fetch_success']); ?> 
+        </div> <?php endif;
+    ?>
 
 <div class="container py-4">
 
@@ -343,6 +350,19 @@ exit;
 </a>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const alert = document.getElementById('fetchAlert');
+    if (!alert) return;
+
+    setTimeout(() => {
+        alert.style.transition = 'opacity 0.5s ease';
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 500);
+    }, 3000);
+});
+</script>
 
 </body>
 </html>

@@ -204,5 +204,6 @@ foreach ($reportRecipients as $recipient) {
 
 /* ================= REDIRECT BACK ================= */
 
+$_SESSION['fetch_success'] = 'Report sent successfully';
 header("Location: reports.php?sent=1");
 exit;
