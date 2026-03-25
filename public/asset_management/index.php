@@ -1,34 +1,83 @@
 <?php
 require('../auth.php');
 require('../../config/db.php');
+include('header.php');
+
+// Get search input
+$search = trim($_GET['search'] ?? '');
+
+// Fetch assets
+if($search != ''){
+    $stmt = $pdo->prepare("
+        SELECT * FROM assets
+        WHERE asset_tag LIKE ?
+        OR brand LIKE ?
+        OR type LIKE ?
+        OR model LIKE ?
+    ");
+    $stmt->execute([
+        "%$search%",
+        "%$search%",
+        "%$search%",
+        "%$search%"
+    ]);
+} else {
+    $stmt = $pdo->query("SELECT * FROM assets");
+}
+
+$assets = $stmt->fetchAll();
 ?>
 
-<h2>Assets List</h2>
+<h2 class="mb-3">Assets List</h2>
 
-<a href="create.php">+ Add Asset</a>
+<a href="create.php" class="btn btn-success mb-3">+ Add Asset</a>
 
-<table border="1" cellpadding="10">
+<form method="GET" class="mb-3">
+    <div class="row">
+        <div class="col-md-6">
+            <input 
+                class="form-control" 
+                type="text" 
+                name="search" 
+                placeholder="Search by tag, brand, type, model"
+                value="<?= htmlspecialchars($search) ?>"
+            >
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary">Search</button>
+        </div>
+    </div>
+</form>
+
+<table class="table table-bordered table-striped">
     <tr>
         <th>ID</th>
         <th>Asset Tag</th>
         <th>Type</th>
         <th>Brand</th>
+        <th>Model</th>
         <th>Status</th>
     </tr>
 
-<?php
-$stmt = $pdo->query("SELECT * FROM assets");
-$assets = $stmt->fetchAll();
-
-foreach($assets as $row){
-?>
+<?php foreach($assets as $row){ ?>
 <tr>
-    <td><?php echo $row['id']; ?></td>
-    <td><?php echo $row['asset_tag']; ?></td>
-    <td><?php echo $row['type']; ?></td>
-    <td><?php echo $row['brand']; ?></td>
-    <td><?php echo $row['status']; ?></td>
+    <td><?= $row['id'] ?></td>
+    <td><?= $row['asset_tag'] ?></td>
+    <td><?= $row['type'] ?></td>
+    <td><?= $row['brand'] ?></td>
+    <td><?= $row['model'] ?></td>
+    <td>
+        <?php if($row['status'] == 'available'){ ?>
+            <span class="badge bg-success">Available</span>
+        <?php } elseif($row['status'] == 'assigned'){ ?>
+            <span class="badge bg-warning text-dark">Assigned</span>
+        <?php } else { ?>
+            <span class="badge bg-secondary"><?= $row['status'] ?></span>
+        <?php } ?>
+    </td>
 </tr>
 <?php } ?>
 
 </table>
+
+<?php include('footer.php'); ?>

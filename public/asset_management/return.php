@@ -1,6 +1,7 @@
 <?php
 require('../auth.php');
 require('../../config/db.php');
+include('header.php');
 
 // GET active assignments
 $stmt = $pdo->query("
@@ -57,3 +58,7 @@ if(isset($_GET['id'])){
 <?php } ?>
 
 </table>
+
+<?php
+include('footer.php');
+?>

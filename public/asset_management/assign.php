@@ -1,6 +1,7 @@
 <?php
 require('../auth.php');
 require('../../config/db.php');
+include('header.php');
 
 // ASSIGN
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
@@ -61,3 +62,7 @@ $assets = $pdo->query("SELECT * FROM assets WHERE status='available'")->fetchAll
 
     <button type="submit">Assign</button>
 </form>
+
+<?php
+include('footer.php');
+?>

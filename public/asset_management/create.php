@@ -1,6 +1,7 @@
 <?php
 require('../auth.php');
 require('../../config/db.php');
+include('header.php');
 
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
     $asset_tag = $_POST['asset_tag'];
@@ -30,3 +31,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
 
     <button type="submit">Save</button>
 </form>
+
+<?php
+include('footer.php');
+?>

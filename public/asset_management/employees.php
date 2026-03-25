@@ -1,6 +1,7 @@
 <?php
 require('../auth.php');
 require('../../config/db.php');
+include('header.php');
 
 // ADD EMPLOYEE
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
@@ -41,6 +42,7 @@ $employees = $stmt->fetchAll();
     <th>Email</th>
     <th>Department</th>
     <th>Status</th>
+    <th>Action</th>
 </tr>
 
 <?php foreach($employees as $row){ ?>
@@ -50,7 +52,16 @@ $employees = $stmt->fetchAll();
     <td><?= $row['email'] ?></td>
     <td><?= $row['department'] ?></td>
     <td><?= $row['status'] ?></td>
+    <td>
+        <a class="btn btn-sm btn-info" href="employee_view.php?id=<?= $row['id'] ?>">
+            View
+        </a>
+    </td>
 </tr>
 <?php } ?>
 
 </table>
+
+<?php
+include('footer.php');
+?>
