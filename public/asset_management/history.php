@@ -14,9 +14,9 @@ $stmt = $pdo->query("
 $rows = $stmt->fetchAll();
 ?>
 
-<h2>Asset History</h2>
+<h2 class="mb-4">Asset History</h2>
 
-<table border="1" cellpadding="10">
+<table class="table table-bordered table-striped">
 <tr>
     <th>Employee</th>
     <th>Asset</th>
@@ -29,7 +29,13 @@ $rows = $stmt->fetchAll();
     <td><?= $r['name'] ?></td>
     <td><?= $r['asset_tag'] ?></td>
     <td><?= $r['assigned_at'] ?></td>
-    <td><?= $r['returned_at'] ?? 'Still Assigned' ?></td>
+    <td>
+        <?php if($r['returned_at']){ ?>
+            <span class="badge bg-secondary"><?= $r['returned_at'] ?></span>
+        <?php } else { ?>
+            <span class="badge bg-warning text-dark">Still Assigned</span>
+        <?php } ?>
+    </td>
 </tr>
 <?php } ?>
 

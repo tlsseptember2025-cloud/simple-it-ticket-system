@@ -20,9 +20,9 @@ $stmt->execute([$id]);
 $assets = $stmt->fetchAll();
 ?>
 
-<h2><?= $employee['name'] ?></h2>
+<h2 class="mb-4"><?= $employee['name'] ?></h2>
 
-<table class="table">
+<table class="table table-bordered table-striped">
 <tr>
     <th>Asset</th>
     <th>Assigned</th>
@@ -33,7 +33,13 @@ $assets = $stmt->fetchAll();
 <tr>
     <td><?= $a['asset_tag'] ?></td>
     <td><?= $a['assigned_at'] ?></td>
-    <td><?= $a['returned_at'] ?? 'Still Assigned' ?></td>
+    <td>
+        <?php if($a['returned_at']){ ?>
+            <span class="badge bg-secondary"><?= $a['returned_at'] ?></span>
+        <?php } else { ?>
+            <span class="badge bg-warning text-dark">Still Assigned</span>
+        <?php } ?>
+    </td>
 </tr>
 <?php } ?>
 

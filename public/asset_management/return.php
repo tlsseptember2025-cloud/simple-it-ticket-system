@@ -2,6 +2,9 @@
 require('../auth.php');
 require('../../config/db.php');
 include('header.php');
+include('helpers.php');
+$errors = [];
+showErrors($errors);
 
 // GET active assignments
 $stmt = $pdo->query("
@@ -15,32 +18,36 @@ $rows = $stmt->fetchAll();
 
 // RETURN
 if(isset($_GET['id'])){
-    $id = $_GET['id'];
+    $id = (int) $_GET['id'];
 
-    // get asset id
+    // check assignment exists
     $stmt = $pdo->prepare("SELECT asset_id FROM asset_assignments WHERE id=?");
     $stmt->execute([$id]);
-    $asset = $stmt->fetch();
+    $assignment = $stmt->fetch();
 
-    // update assignment
-    $pdo->prepare("
-        UPDATE asset_assignments 
-        SET returned_at = NOW() 
-        WHERE id=?
-    ")->execute([$id]);
+    if(!$assignment){
+        echo "<div class='alert alert-danger'>Invalid request</div>";
+    } else {
+        // update safely
+        $pdo->prepare("
+            UPDATE asset_assignments 
+            SET returned_at = NOW()
+            WHERE id=?
+        ")->execute([$id]);
 
-    // update asset
-    $pdo->prepare("
-        UPDATE assets SET status='available' WHERE id=?
-    ")->execute([$asset['asset_id']]);
+        $pdo->prepare("
+            UPDATE assets SET status='available' WHERE id=?
+        ")->execute([$assignment['asset_id']]);
 
-    header("Location: return.php");
+        header("Location: return.php");
+        exit;
+    }
 }
 ?>
 
-<h2>Return Assets</h2>
+<h2 class="mb-4">Return Assets</h2>
 
-<table border="1" cellpadding="10">
+<table class="table table-bordered table-striped">
 <tr>
     <th>Employee</th>
     <th>Asset</th>
@@ -52,7 +59,9 @@ if(isset($_GET['id'])){
     <td><?= $r['name'] ?></td>
     <td><?= $r['asset_tag'] ?></td>
     <td>
-        <a href="?id=<?= $r['id'] ?>">Return</a>
+        <a class="btn btn-sm btn-danger" href="?id=<?= $r['id'] ?>">
+            Return
+        </a>
     </td>
 </tr>
 <?php } ?>
