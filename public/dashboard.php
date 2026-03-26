@@ -271,6 +271,7 @@ $completionRate = ($totalTicketsAll > 0)
         <div class="ms-auto d-flex align-items-center gap-3"> 
             <a href="reports.php" class="btn btn-sm btn-outline-secondary"> 📊 Reports </a> 
             <a href="run_fetch.php" class="btn btn-sm btn-outline-primary"> 📥 Fetch Emails </a> 
+            <a href="asset_management/index.php" class="btn btn-sm btn-outline-primary"> 📥 Assets </a> 
             <span class="text-muted"> <?php echo htmlspecialchars($_SESSION['admin_username']); ?> </span> 
             <a href="logout.php" class="text-decoration-none"> Logout </a> 
         </div> 

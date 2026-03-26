@@ -16,6 +16,7 @@
             <a class="btn btn-light btn-sm" href="assign.php">Assign</a>
             <a class="btn btn-light btn-sm" href="return.php">Return</a>
             <a class="btn btn-light btn-sm" href="history.php">History</a>
+            <a class="btn btn-light btn-sm" href="../dashboard.php">IT Support</a>
             <a class="btn btn-danger btn-sm" href="../logout.php">Logout</a>
         </div>
     </div>
