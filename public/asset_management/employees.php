@@ -3,7 +3,7 @@ require('../auth.php');
 require('../../config/db.php');
 include('header.php');
 include('helpers.php');
-
+$errors = [];
 
 showErrors($errors);
 

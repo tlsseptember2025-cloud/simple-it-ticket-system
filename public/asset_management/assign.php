@@ -10,34 +10,46 @@ showErrors($errors);
 
 
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
+
     $employee_id = (int) $_POST['employee_id'];
     $asset_id = (int) $_POST['asset_id'];
 
-    if($employee_id <= 0) $errors[] = "Invalid employee";
-    if($asset_id <= 0) $errors[] = "Invalid asset";
-
-    // check if asset already assigned
+    // check if already assigned
     $check = $pdo->prepare("
-        SELECT id FROM asset_assignments
+        SELECT id FROM asset_assignments 
         WHERE asset_id=? AND returned_at IS NULL
     ");
     $check->execute([$asset_id]);
 
     if($check->rowCount() > 0){
-        $errors[] = "Asset already assigned";
-    }
+        echo "<div class='alert alert-danger'>Asset already assigned</div>";
+    } else {
 
-    if(empty($errors)){
+        // insert assignment
         $stmt = $pdo->prepare("
             INSERT INTO asset_assignments (employee_id, asset_id, assigned_at)
             VALUES (?, ?, NOW())
         ");
         $stmt->execute([$employee_id, $asset_id]);
 
+        // 🔥 IMPORTANT — get assignment id
+        $assignment_id = $pdo->lastInsertId();
+
+        // update asset status
         $pdo->prepare("UPDATE assets SET status='assigned' WHERE id=?")
             ->execute([$asset_id]);
 
-        echo "<div class='alert alert-success'>Assigned successfully</div>";
+        // ✅ SHOW SUCCESS + PRINT BUTTON HERE
+        echo "
+        <div class='alert alert-success'>
+            Assigned successfully
+        </div>
+
+        <a class='btn btn-secondary mt-3' target='_blank'
+           href='print_assign_form.php?id=$assignment_id'>
+           Print Assignment Form
+        </a>
+        ";
     }
 }
 
@@ -47,6 +59,12 @@ $assets = $pdo->query("SELECT * FROM assets WHERE status='available'")->fetchAll
 ?>
 
 <h2 class="mb-4">Assign Asset</h2>
+
+<a class="btn btn-secondary mt-3" href="print_assign.php" target="_blank">
+    Print Assigned
+</a>
+
+<br><br><br>
 
 <form method="POST" class="row g-3">
 

@@ -12,6 +12,7 @@
         <a class="navbar-brand" href="#">IT Assets</a>
         <div>
             <a class="btn btn-light btn-sm" href="index.php">Assets</a>
+            <a class="btn btn-light btn-sm" href="retired.php">Retired</a>
             <a class="btn btn-light btn-sm" href="employees.php">Employees</a>
             <a class="btn btn-light btn-sm" href="assign.php">Assign</a>
             <a class="btn btn-light btn-sm" href="return.php">Return</a>
