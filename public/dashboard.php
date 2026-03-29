@@ -4,6 +4,9 @@ require '../config/db.php';
 
 /* ================= FLASH MESSAGE ================= */
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 if (isset($_GET['fetched']) && empty($_SESSION['fetch_success'])) {
     $_SESSION['fetch_success'] = 'Emails fetched successfully';
 }

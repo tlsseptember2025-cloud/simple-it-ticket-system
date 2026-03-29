@@ -7,9 +7,10 @@ require __DIR__ . '/../config/mailer.php';
 
 $allowedDomain = '@loopsautomation.com';
 
-$imapHost = '{imap.gmail.com:993/imap/ssl}INBOX';
+//$imapHost = '{imap.gmail.com:993/imap/ssl}INBOX';
+$imapHost = '{imap.gmail.com:993/imap/ssl}';
 $imapUser = 'rami.wahdan@loopsautomation.com';
-$imapPass = 'svyh dqhe rlif dygv';
+$imapPass = 'lsyk wfbb owew dvlb';
 
 /* ================= HELPERS ================= */
 
@@ -142,18 +143,48 @@ function extractAttachments($mailbox, $emailNumber, $structure, $partNumber, $ti
 /* ================= PROCESS MAIL ================= */
 
 $mailbox = imap_open($imapHost, $imapUser, $imapPass);
-if (!$mailbox) return;
+
+if (!$mailbox) {
+    echo "CONNECT FAILED:\n";
+    print_r(imap_errors());
+    exit;
+}
 
 $emails = imap_search($mailbox, 'ALL');
-if (!$emails) {
+
+// 👇 PUT IT HERE
+var_dump($emails);
+print_r(imap_errors());
+//exit;
+
+if ($emails === false) {
     imap_close($mailbox);
     return;
 }
 
+$emails = imap_search($mailbox, 'ALL');
+
+echo "<pre>";
+var_dump($emails);
+echo "</pre>";
+
+if (is_array($emails)) {
+    echo "Loop will run<br>";
+
+    foreach ($emails as $emailNumber) {
+        echo "Processing email: $emailNumber <br>";
+    }
+} else {
+    echo "Emails is NOT array<br>";
+}
+
 foreach ($emails as $emailNumber) {
 
+    echo "Processing email: $emailNumber <br>";
     $headers  = imap_rfc822_parse_headers(imap_fetchheader($mailbox, $emailNumber));
     $overview = imap_fetch_overview($mailbox, $emailNumber, 0)[0];
+
+    imap_setflag_full($mailbox, $emailNumber, "\\Seen");
 
     $messageId = $headers->message_id ?? null;
     if ($messageId) {
@@ -261,4 +292,5 @@ foreach ($emails as $emailNumber) {
         ->execute([$messageId]);
 }
 
+var_dump($emails);
 imap_close($mailbox);
