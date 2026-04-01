@@ -197,18 +197,29 @@ foreach ($emails as $emailNumber) {
     if (!str_ends_with($fromEmail, $allowedDomain)) continue;
     if ($fromEmail === strtolower($imapUser)) continue;
 
-    $toMatch = false;
-    if (!empty($headers->to)) {
-        foreach ($headers->to as $to) {
-            $toEmail = strtolower($to->mailbox . '@' . $to->host);
-            if ($toEmail === strtolower($imapUser)) {
-                $toMatch = true;
-                break;
-            }
-        }
-    }
+    $toEmails = [];
 
-    if (!$toMatch) continue;
+// collect all TO emails
+if (!empty($headers->to)) {
+    foreach ($headers->to as $to) {
+        $toEmails[] = strtolower($to->mailbox . '@' . $to->host);
+    }
+}
+
+// ❌ must be sent ONLY to you
+if (count($toEmails) !== 1) {
+    continue;
+}
+
+// ❌ must match your email exactly
+if ($toEmails[0] !== strtolower($imapUser)) {
+    continue;
+}
+
+// ❌ ignore if CC exists
+if (!empty($headers->cc)) {
+    continue;
+}
 
     $subjectClean = normalizeSubject($overview->subject ?? '(No Subject)');
     $originalSubject = $overview->subject ?? '';
