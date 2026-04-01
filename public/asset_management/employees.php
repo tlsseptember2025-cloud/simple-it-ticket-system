@@ -83,11 +83,27 @@ $employees = $stmt->fetchAll();
     <td>
         <span class="badge bg-success"><?= $row['status'] ?></span>
     </td>
-    <td>
-        <a class="btn btn-sm btn-info" href="employee_view.php?id=<?= $row['id'] ?>">
-            View
+   <td>
+
+    <a class="btn btn-sm btn-info" href="employee_view.php?id=<?= $row['id'] ?>">
+        View
+    </a>
+
+    <?php if($row['status'] == 'active'){ ?>
+        <a class="btn btn-sm btn-warning"
+           onclick="return confirm('Deactivate this employee?')"
+           href="deactivate_employee.php?id=<?= $row['id'] ?>">
+           Deactivate
         </a>
-    </td>
+    <?php } else { ?>
+        <a class="btn btn-sm btn-success"
+           onclick="return confirm('Reactivate this employee?')"
+           href="reactivate_employee.php?id=<?= $row['id'] ?>">
+           Reactivate
+        </a>
+    <?php } ?>
+
+</td>
 </tr>
 <?php } ?>
 
