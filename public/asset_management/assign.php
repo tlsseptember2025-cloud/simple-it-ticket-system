@@ -60,10 +60,6 @@ $assets = $pdo->query("SELECT * FROM assets WHERE status='available'")->fetchAll
 
 <h2 class="mb-4">Assign Asset</h2>
 
-<a class="btn btn-secondary mt-3" href="print_assign.php" target="_blank">
-    Print Assigned
-</a>
-
 <br><br><br>
 
 <form method="POST" class="row g-3">

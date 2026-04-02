@@ -16,6 +16,10 @@ $rows = $stmt->fetchAll();
 
 <h2 class="mb-4">Asset History</h2>
 
+<a class="btn btn-secondary mb-3" target="_blank" href="print_history.php">
+    Print History
+</a>
+
 <table class="table table-bordered table-striped">
 <tr>
     <th>Employee</th>

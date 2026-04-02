@@ -46,10 +46,6 @@ $rows = $stmt->fetchAll();
 
 <h2 class="mb-4">Return Assets</h2>
 
-<a class="btn btn-secondary mb-3" target="_blank" href="print_return.php">
-    Print All Returned
-</a>
-
 <table class="table table-bordered table-striped">
 <tr>
     <th>Employee</th>

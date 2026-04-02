@@ -24,20 +24,56 @@ if(!$data){
 <head>
     <title>Asset Return Form</title>
     <style>
-        body { font-family: Arial; padding: 40px; }
-        .header { text-align: center; }
-        .logo { height: 80px; }
-        .title { font-size: 22px; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top:20px;}
-        td, th { border: 1px solid #000; padding: 10px; }
-        .sign { margin-top: 60px; display: flex; justify-content: space-between; }
-    </style>
+    body { font-family: Arial; padding: 40px; }
+
+    .header {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .logo {
+        height: 120px;
+        display: block;
+        margin: 0 auto;
+    }
+
+    .title {
+        font-size: 22px;
+        margin-top: 10px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    th, td {
+        border: 1px solid #000;
+        padding: 10px;
+    }
+
+    th {
+        background: #f0f0f0;
+    }
+
+    .sign {
+        margin-top: 60px;
+        display: flex;
+        justify-content: space-between;
+    }
+</style>
 </head>
 <body>
 
 <div class="header">
     <img src="../assets/company-logo.png" class="logo">
     <div class="title"><b>Asset Return Form</b></div>
+    <div style="font-size:14px; margin-top:5px;">
+            Loops Automation LLC <br>
+            IT Department
+    </div>
+    <hr>
 </div>
 
 <table>
@@ -64,6 +100,10 @@ if(!$data){
 <script>
 window.print();
 </script>
+
+<div style="margin-top:40px; font-size:12px;">
+    Generated on: <?= date('Y-m-d H:i') ?>
+</div>
 
 </body>
 </html>
