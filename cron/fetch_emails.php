@@ -10,7 +10,7 @@ $allowedDomain = '@loopsautomation.com';
 //$imapHost = '{imap.gmail.com:993/imap/ssl}INBOX';
 $imapHost = '{imap.gmail.com:993/imap/ssl}';
 $imapUser = 'rami.wahdan@loopsautomation.com';
-$imapPass = 'lsyk wfbb owew dvlb';
+$imapPass = 'hpxn nsnc bieu ijeq';
 
 /* ================= HELPERS ================= */
 
