@@ -373,6 +373,11 @@ echo nl2br(htmlspecialchars(cleanDisplay($ticket['message'])));
                         Security
                     </option>
 
+                    <option value="assign/return_assets"
+                    <?php if (($ticket['category'] ?? '') === 'assign/return_assets') echo 'selected'; ?>>
+                        Assign/Return Assets
+                    </option>
+
                     <option value="Other"
                     <?php if (($ticket['category'] ?? '') === 'Other') echo 'selected'; ?>>
                         Other
