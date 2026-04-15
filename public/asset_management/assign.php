@@ -11,6 +11,17 @@ showErrors($errors);
 
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
 
+    // 🔒 Check employee is active
+    $stmt = $pdo->prepare("SELECT status FROM employees WHERE id=?");
+    $stmt->execute([$employee_id]);
+    $emp = $stmt->fetch();
+
+    if(!$emp || $emp['status'] != 'active'){
+        $_SESSION['error'] = "Cannot assign asset to inactive employee";
+        header("Location: assign.php");
+        exit;
+    }
+
     $employee_id = (int) $_POST['employee_id'];
     $asset_id = (int) $_POST['asset_id'];
 
@@ -22,7 +33,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
     $check->execute([$asset_id]);
 
     if($check->rowCount() > 0){
-        echo "<div class='alert alert-danger'>Asset already assigned</div>";
+        $_SESSION['error'] = "Cannot assign asset to inactive employee";
     } else {
 
         // insert assignment
@@ -40,23 +51,16 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
             ->execute([$asset_id]);
 
         // ✅ SHOW SUCCESS + PRINT BUTTON HERE
-        echo "
-        <div class='alert alert-success'>
-            Assigned successfully
-        </div>
+       $_SESSION['success'] = "Asset assigned successfully";
+        header("Location: assign.php");
+        exit;
+            }
+        }
 
-        <a class='btn btn-secondary mt-3' target='_blank'
-           href='print_assign_form.php?id=$assignment_id'>
-           Print Assignment Form
-        </a>
-        ";
-    }
-}
-
-// LOAD DATA
-$employees = $pdo->query("SELECT * FROM employees")->fetchAll();
-$assets = $pdo->query("SELECT * FROM assets WHERE status='available'")->fetchAll();
-?>
+        // LOAD DATA
+        $employees = $pdo->query("SELECT * FROM employees WHERE status='active'")->fetchAll();
+        $assets = $pdo->query("SELECT * FROM assets WHERE status='available'")->fetchAll();
+        ?>
 
 <h2 class="mb-4">Assign Asset</h2>
 
