@@ -197,27 +197,39 @@ foreach ($emails as $emailNumber) {
     if (!str_ends_with($fromEmail, $allowedDomain)) continue;
     if ($fromEmail === strtolower($imapUser)) continue;
 
-    $toEmails = [];
+$toEmails = [];
 
-// collect all TO emails
+// 1. Try structured headers
 if (!empty($headers->to)) {
     foreach ($headers->to as $to) {
-        $toEmails[] = strtolower($to->mailbox . '@' . $to->host);
+        if (!empty($to->mailbox) && !empty($to->host)) {
+            $toEmails[] = strtolower($to->mailbox . '@' . $to->host);
+        }
     }
 }
 
-// ❌ must be sent ONLY to you
+// 2. Fallback: parse raw TO (important for Gmail cases)
+if (empty($toEmails) && !empty($overview->to)) {
+    preg_match_all('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/', $overview->to, $matches);
+
+    if (!empty($matches[0])) {
+        foreach ($matches[0] as $email) {
+            $toEmails[] = strtolower(trim($email));
+        }
+    }
+}
+
+// ✅ DEBUG (remove after testing)
+echo "<pre>";
+print_r($toEmails);
+echo "</pre>";
+
+// ✅ YOUR RULE
 if (count($toEmails) !== 1) {
     continue;
 }
 
-// ❌ must match your email exactly
 if ($toEmails[0] !== strtolower($imapUser)) {
-    continue;
-}
-
-// ❌ ignore if CC exists
-if (!empty($headers->cc)) {
     continue;
 }
 
