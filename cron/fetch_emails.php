@@ -12,6 +12,23 @@ $imapHost = '{imap.gmail.com:993/imap/ssl}';
 $imapUser = 'rami.wahdan@loopsautomation.com';
 $imapPass = 'hpxn nsnc bieu ijeq';
 
+function decodeSubject($subject) {
+    $decoded = imap_mime_header_decode($subject);
+
+    $result = '';
+    foreach ($decoded as $part) {
+        $charset = strtolower($part->charset);
+
+        if ($charset != 'default') {
+            $result .= iconv($charset, 'UTF-8//IGNORE', $part->text);
+        } else {
+            $result .= $part->text;
+        }
+    }
+
+    return $result;
+}
+
 /* ================= HELPERS ================= */
 
 function normalizeSubject(string $subject): string
@@ -233,7 +250,10 @@ if ($toEmails[0] !== strtolower($imapUser)) {
     continue;
 }
 
-    $subjectClean = normalizeSubject($overview->subject ?? '(No Subject)');
+    $rawSubject = $overview->subject ?? '(No Subject)';
+    $decodedSubject = decodeSubject($rawSubject);
+    $subjectClean = normalizeSubject($decodedSubject);
+    
     $originalSubject = $overview->subject ?? '';
     $structure = imap_fetchstructure($mailbox, $emailNumber);
 
